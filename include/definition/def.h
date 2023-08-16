@@ -1,3 +1,4 @@
+#pragma once
 /* ========================================================================= *
  *                                                                           *
  *                                 SMPL++                                    *
@@ -51,7 +52,6 @@
 // #ifndef FACE_INDEX_NUM
 // #define FACE_INDEX_NUM (const size_t) smpl::face_index_num
 // #endif // FACE_INDEX_NUM
-#include <stdint.h>
 
 #ifndef BATCH_SIZE
 #define BATCH_SIZE smpl::batch_size
@@ -77,31 +77,34 @@
 #define FACE_INDEX_NUM smpl::face_index_num
 #endif // FACE_INDEX_NUM
 
+#define SHOWOUT true
 //===== INCLUDES ==============================================================
 
 #include <stdlib.h>
+#include <stdint.h>
 
 //===== EXTERNAL DECLARATIONS =================================================
 
 
 //===== NAMESPACES ============================================================
 
-namespace smpl {
+namespace smpl
+{
 
-//===== INTERNAL MACROS =======================================================
+    //===== INTERNAL MACROS =======================================================
 
 
-//===== INTERNAL DECLARATIONS =================================================
+    //===== INTERNAL DECLARATIONS =================================================
 
-extern int64_t batch_size;// 256
-extern int64_t vertex_num;// 6890
-extern const int64_t joint_num;// 24
-extern const int64_t shape_basis_dim;// 10
-extern const int64_t pose_basis_dim;// 207
-extern const int64_t face_index_num;// 13776
+    extern int64_t batch_size;// 256
+    extern int64_t vertex_num;// 6890
+    extern int64_t joint_num;// 24
+    extern int64_t shape_basis_dim;// 10
+    extern int64_t pose_basis_dim;// 207
+    extern int64_t face_index_num;// 13776
 
-//=============================================================================
-} // namespace smpl
+    //=============================================================================
+}; // namespace smpl
 //=============================================================================
 #endif // DEF_H
 //=============================================================================

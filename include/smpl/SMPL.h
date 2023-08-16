@@ -1,54 +1,53 @@
-/* ========================================================================= *
- *                                                                           *
- *                                 SMPL++                                    *
- *                    Copyright (c) 2018, Chongyi Zheng.                     *
- *                          All Rights reserved.                             *
- *                                                                           *
- * ------------------------------------------------------------------------- *
- *                                                                           *
- * This software implements a 3D human skinning model - SMPL: A Skinned      *
- * Multi-Person Linear Model with C++.                                       *
- *                                                                           *
- * For more detail, see the paper published by Max Planck Institute for      *
- * Intelligent Systems on SIGGRAPH ASIA 2015.                                *
- *                                                                           *
- * We provide this software for research purposes only.                      *
- * The original SMPL model is available at http://smpl.is.tue.mpg.           *
- *                                                                           *
- * ========================================================================= */
-
-//=============================================================================
-//
-//  CLASS SMPL DECLARATIONS
-//
-//=============================================================================
-
+#pragma once
 #ifndef SMPL_H
 #define SMPL_H
-
-//===== EXTERNAL MACROS =======================================================
-
-
-//===== INCLUDES ==============================================================
-
-//----------
 #include <string>
+
+#define _CRT_SECURE_NO_DEPRECATE
+// #define EIGEN_RUNTIME_NO_MALLOC // Define this symbol to enable runtime tests for allocations
+// -------------------
+// Eigen
+// -------------------
+// #include "Eigen/Eigen"
+// -------------------
+// zlib
+// -------------------
+
+#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
+#include <fcntl.h>
+#include <io.h>
+#define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#else
+#  define SET_BINARY_MODE(file)
+#endif
+
+#define CHECK_ERR(err, msg) { \
+    if (err != Z_OK) { \
+        fprintf(stderr, "%s error: %d\n", msg, err); \
+        exit(1); \
+    } \
+}
+// -------------------
+// Numpy library
+// -------------------
+#include "cnpy.h"
+
 //----------
-#include <nlohmann/json.hpp>
 #include <torch/torch.h>
 //----------
 #include "smpl/BlendShape.h"
 #include "smpl/JointRegression.h"
 #include "smpl/WorldTransformation.h"
 #include "smpl/LinearBlendSkinning.h"
-//----------
 
-//===== EXTERNAL FORWARD DECLARATIONS =========================================
-
-
-//===== NAMESPACES ============================================================
+#define COUT_VAR(x) std::cout << #x"=" << x << std::endl;
+#define COUT_ARR(x) std::cout << "---------"#x"---------" << std::endl;\
+        std::cout << x << std::endl;\
+        std::cout << "---------"#x"---------" << std::endl;
+#define SHOW_IMG(x) cv::namedWindow(#x);cv::imshow(#x,x);cv::waitKey(20);
 
 namespace smpl {
+#define SHOW_OUT true
 
 //===== INTERNAL MACROS =======================================================
 
@@ -190,14 +189,15 @@ namespace smpl {
 
 class SMPL final
 {
-
-private: // PIRVATE ATTRIBUTES
+public:
+    bool usePosePca;
+    //private: // PIRVATE ATTRIBUTES
 
     torch::Device m__device;
 
     std::string m__modelPath;
     std::string m__vertPath;
-    nlohmann::json m__model;
+   // nlohmann::json m__model;
 
     torch::Tensor m__faceIndices;
     torch::Tensor m__shapeBlendBasis;
@@ -206,6 +206,10 @@ private: // PIRVATE ATTRIBUTES
     torch::Tensor m__jointRegressor;
     torch::Tensor m__kinematicTree;
     torch::Tensor m__weights;
+
+    torch::Tensor m_parents;
+    torch::Tensor m_children;
+    torch::Tensor m_leaf_name;
 
     BlendShape m__blender;
     JointRegression m__regressor;
@@ -248,7 +252,34 @@ public: // PUBLIC METHODS
         torch::Tensor &beta,
         torch::Tensor &theta) noexcept(false);
     void out(int64_t index) noexcept(false);
+    void getVandF(int64_t index, std::vector<float>& vx,
+        std::vector<float>& vy,
+        std::vector<float>& vz,
+        std::vector<size_t>& f1,
+        std::vector<size_t>& f2,
+        std::vector<size_t>& f3
+    ) noexcept(false);
 
+    void getSkeleton(int64_t index,
+        std::vector<int64_t>& l1,
+        std::vector<int64_t>& l2,
+        std::vector<float>& jx,
+        std::vector<float>& jy,
+        std::vector<float>& jz
+    ) noexcept(false);
+    //////////////////////////////////////
+    //anzs add 
+    void hybrik(const torch::Tensor& pose_skeleton,
+         const torch::Tensor& betas
+//          const torch::Tensor& v_template,
+//          const torch::Tensor& shapedirs,
+//          const torch::Tensor& posedirs,
+//          const torch::Tensor& J_regressor,
+//          const torch::Tensor& J_regressor_h36m,
+//          const torch::Tensor& parents,
+//          const torch::Tensor& children_map,
+//          const torch::Tensor& lbs_weights
+        );
 };
 
 //=============================================================================

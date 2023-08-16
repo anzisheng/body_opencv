@@ -17,7 +17,7 @@
 #include <string>
 
 #include <torch/torch.h>
-
+#include <cam/smplcam.h>
 //#include "definition/def.h"
 //#include <Device.h>
 //#define SINGLE_SMPL smpl::Singleton<smpl::SMPL>
@@ -568,6 +568,8 @@ int main(int argc, char const* argv[])
 				torch::Device device_cuda(device_type, 0);
 				device_cuda.set_index(0);
 
+                std::string modelPath = "data/basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+                smplcam* p_smplcam = new smplcam(device_cuda);
 
 
                 //////////////////////////////////////////////////////////////////////////
