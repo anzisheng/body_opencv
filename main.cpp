@@ -16,6 +16,7 @@
 #include <cmath>
 #include <string>
 
+#include <torch/torch.h>
 
 //#include "definition/def.h"
 //#include <Device.h>
@@ -273,6 +274,8 @@ int main(int argc, char const* argv[])
     std::ofstream outfile(filename, std::ios::app);
     std::cout << outfile.is_open();
     cv::VideoWriter writer;
+
+
 
 
     std::string output_filename = "E:/output.avi";
@@ -550,9 +553,24 @@ int main(int argc, char const* argv[])
                 //step2: convert25-->29.
                 std::vector<k4a_float3_t> target29 = convert25_29(source25);
 
+                //////////////////////////////////////////////////////////////////////////
+
+				torch::DeviceType device_type;
+
+				if (torch::cuda::is_available())
+				{
+					device_type = torch::kCUDA;
+				}
+				else
+				{
+					device_type = torch::kCPU;
+				}
+				torch::Device device_cuda(device_type, 0);
+				device_cuda.set_index(0);
 
 
 
+                //////////////////////////////////////////////////////////////////////////
                 string time = Time2Str();
                 outfile << time.c_str() << ",";
 
