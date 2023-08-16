@@ -568,7 +568,7 @@ int main(int argc, char const* argv[])
 				torch::Device device_cuda(device_type, 0);
 				device_cuda.set_index(0);
 
-                std::string modelPath = "data/basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+                std::string modelPath = "x64\debug\data\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
                 smplcam* p_smplcam = new smplcam(device_cuda);
 
 
