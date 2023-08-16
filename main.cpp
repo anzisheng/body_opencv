@@ -1,4 +1,5 @@
 
+//#include <torch/torch.h>
 #define _USE_MATH_DEFINES
 #include <k4a/k4a.h>
 #define _USE_MATH_DEFINES
@@ -15,7 +16,12 @@
 #include <cmath>
 #include <string>
 
-#include "main.h"
+
+//#include "definition/def.h"
+//#include <Device.h>
+//#define SINGLE_SMPL smpl::Singleton<smpl::SMPL>
+
+//#include "main.h"
 
 // OpenCV
 #include <opencv2/opencv.hpp>
@@ -205,11 +211,16 @@ std::vector<k4a_float3_t>  convert25_29(std::vector<k4a_float3_t> source25)
 
     
 
-
 using namespace std;
+//using namespace torch;
 
-int main()
+int main(int argc, char const* argv[])
 {
+    //cuda device    
+    
+// 	torch::Device cuda(torch::kCUDA);    
+// 	cuda.set_index(0);
+
 
 
     k4a_device_t device = NULL;
