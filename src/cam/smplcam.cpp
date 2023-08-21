@@ -7,7 +7,7 @@ smplcam::smplcam(torch::Device device)
 
 
 	//anzs 加载xyz.npy
-	cnpy::NpyArray arr = cnpy::npy_load("E:\\project\\kinect\\body_opencv\\x64\\Debug\\data\\xyz.npy");
+	cnpy::NpyArray arr = cnpy::npy_load("x64\\debug\\data\\xyz.npy");
 	//std::vector<float> scales;
 
 	//pred_xyz_jts_29 = torch.tensor(pred_xyz_jts_29).cuda()
@@ -16,7 +16,7 @@ smplcam::smplcam(torch::Device device)
 	m_pred_xyz_jts_29 = torch::from_blob(arr.data<float>(), { 1,29,3 }).to(device);
 	std::cout << "xyz:" << m_pred_xyz_jts_29.device() << m_pred_xyz_jts_29<< std::endl; //<< m_pred_xyz_jts_29 << std::endl;
 	
-	cnpy::NpyArray arrshape = cnpy::npy_load("x64/Debug/data/shape.npy"); //工作路径就是vcproj所在的路径
+	cnpy::NpyArray arrshape = cnpy::npy_load("x64\\debug\\data\\shape.npy");
 	m_pred_shape = torch::from_blob(arrshape.data<float>(), { 1,10 }).to(device);
 	
 
@@ -24,7 +24,7 @@ smplcam::smplcam(torch::Device device)
 
 }
 
-void smplcam::call_forward(/*const torch::Tensor& xyz, const torch::Tensor& shape*/)
+void smplcam::call_forward(const torch::Tensor& restJoints_24)
 {
 	
 	m_pred_xyz_jts_29 = m_pred_xyz_jts_29 * 2.2;
@@ -34,7 +34,7 @@ void smplcam::call_forward(/*const torch::Tensor& xyz, const torch::Tensor& shap
 		std::cout << "m_pred_shape:" << m_pred_shape << std::endl;
 
 	}
-	m_smpl->hybrik(m_pred_xyz_jts_29, m_pred_shape);
+	m_smpl->hybrik(m_pred_xyz_jts_29, m_pred_shape,restJoints_24);
 
 
 

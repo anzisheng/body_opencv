@@ -1,6 +1,5 @@
 #pragma optimize( "", on )
-#undef UNICODE
-#undef _UNICODE
+
 #include <chrono>
 #include <torch/torch.h>
 #include "definition/def.h"
@@ -21,23 +20,6 @@
 #include<map>
 #include<string>
 
-
-
-#define _USE_MATH_DEFINES
-#include <k4a/k4a.h>
-#define _USE_MATH_DEFINES
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <k4a/k4a.h>
-#include <k4abt.h>
-#include <math.h>
-#include <fstream>
-#include <chrono>
-#include <thread>
-#include <time.h>
-#include <cmath>
-#include <string>
 
 
 /*
@@ -339,21 +321,6 @@ using clk = std::chrono::system_clock;
 #include "torch/script.h"
 using namespace torch::indexing;
 
-
-
-// OpenCV
-#include <opencv2/opencv.hpp>
-// Kinect DK
-#include <k4a.hpp>
-#define VERIFY(result, error)                                                                            \
-    if(result != K4A_RESULT_SUCCEEDED)                                                                   \
-    {                                                                                                    \
-        printf("%s \n - (File: %s, Function: %s, Line: %d)\n", error, __FILE__, __FUNCTION__, __LINE__); \
-        exit(1);                                                                                         \
-    }                                                                                                    \
-
-
-
 int main(int argc, char const* argv[])
 {
 	
@@ -365,50 +332,6 @@ int main(int argc, char const* argv[])
 // 	std::cout << a << std::endl;
 // 	
 // 	return 0;
-	//1. 使用kinect设备的输出关节点作为输入。
-	k4a_device_t device = NULL;
-	VERIFY(k4a_device_open(0, &device), "Open K4A Device failed!");
-
-	const uint32_t device_count = k4a_device_get_installed_count();
-	if (1 == device_count)
-	{
-		std::cout << "Found " << device_count << " connected devices. " << std::endl;
-	}
-	else
-	{
-		std::cout << "Error: more than one K4A devices found. " << std::endl;
-	}
-
-	//打开设备
-	k4a_device_open(0, &device);
-	std::cout << "Done: open device. " << std::endl;
-
-	// Start camera. Make sure depth camera is enabled.
-	k4a_device_configuration_t deviceConfig = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-	deviceConfig.depth_mode = K4A_DEPTH_MODE_NFOV_2X2BINNED;
-	deviceConfig.color_resolution = K4A_COLOR_RESOLUTION_720P;
-	deviceConfig.camera_fps = K4A_FRAMES_PER_SECOND_30;
-	deviceConfig.color_format = K4A_IMAGE_FORMAT_COLOR_BGRA32;
-	deviceConfig.synchronized_images_only = true;// ensures that depth and color images are both available in the capture
-
-	//开始相机
-	//k4a_device_start_cameras(device, &deviceConfig);
-	VERIFY(k4a_device_start_cameras(device, &deviceConfig), "Start K4A cameras failed!");
-	std::cout << "Done: start camera." << std::endl;
-	return 0;
-	//查询传感器校准
-	k4a_calibration_t sensor_calibration;
-	k4a_device_get_calibration(device, deviceConfig.depth_mode, deviceConfig.color_resolution, &sensor_calibration);
-	VERIFY(k4a_device_get_calibration(device, deviceConfig.depth_mode, deviceConfig.color_resolution, &sensor_calibration),
-		"Get depth camera calibration failed!");
-	//创建人体跟踪器
-	k4abt_tracker_t tracker = NULL;
-	k4abt_tracker_configuration_t tracker_config = K4ABT_TRACKER_CONFIG_DEFAULT;
-	k4abt_tracker_create(&sensor_calibration, tracker_config, &tracker);
-	VERIFY(k4abt_tracker_create(&sensor_calibration, tracker_config, &tracker), "Body tracker initialization failed!");
-
-
-	
 
 
 	torch::DeviceType device_type;
@@ -421,21 +344,37 @@ int main(int argc, char const* argv[])
 	{
 		device_type = torch::kCPU;
 	}
-	torch::Device device_cuda(device_type, 0);
-	device_cuda.set_index(0);
+	torch::Device device(device_type, 0);
+	device.set_index(0);
 
 
 	std::string modelPath = "data/basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
 
-	smplcam* p_smplcam = new smplcam(device_cuda);
+	smplcam* p_smplcam = new smplcam(device);
 
 	p_smplcam->m_smpl = SINGLE_SMPL::get();
-	SINGLE_SMPL::get()->setDevice(device_cuda);
+	SINGLE_SMPL::get()->setDevice(device);
 	SINGLE_SMPL::get()->setModelPath(modelPath);
 	SINGLE_SMPL::get()->init();
 
+	//replace
+	torch::Tensor vertices;
+	torch::Tensor beta0;
+	torch::Tensor theta0;
 
-	p_smplcam->call_forward(); //.hybrik(); // .skinning();
+	beta0 = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device);
+
+	float pose_rand_amplitude0 = 0.0;
+	theta0 = pose_rand_amplitude0 * torch::rand({ BATCH_SIZE, JOINT_NUM, 3 }) - pose_rand_amplitude0 / 2 * torch::ones({ BATCH_SIZE, JOINT_NUM, 3 });
+
+	SINGLE_SMPL::get()->launch(beta0, theta0);
+	torch::Tensor joints = SINGLE_SMPL::get()->getRestJoint();
+	std::cout << "joints " << joints << std::endl;
+
+	
+
+
+	p_smplcam->call_forward(joints); //.hybrik(); // .skinning();
 
 // 	//anzs 加载xyz.npy
 // 	cnpy::NpyArray arr = cnpy::npy_load("data/xyz.npy");
@@ -535,11 +474,11 @@ int main(int argc, char const* argv[])
 // 	SINGLE_SMPL::get()->setModelPath(modelPath);
 // 	SINGLE_SMPL::get()->init();
 // 	
-	torch::Tensor vertices;
+	torch::Tensor vertices0;
 	torch::Tensor beta;
 	torch::Tensor theta;
 
-	beta = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device_cuda);
+	beta = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device);
 
 	float pose_rand_amplitude = 0.5;
 	while (k != 27)
@@ -562,7 +501,7 @@ int main(int argc, char const* argv[])
 			theta.data<float>()[i*3+1] = 0; // ry
 			//theta.data<float>()[i*3+2] = 0; // rz
 		}
-		theta = theta.to(device_cuda);
+		theta = theta.to(device);
 		std::cout << "theta rx,ry is set 0:" << endl << theta << endl;
 		try
 		{
@@ -578,6 +517,9 @@ int main(int argc, char const* argv[])
 
 			vertices = SINGLE_SMPL::get()->getVertex();
 			SINGLE_SMPL::get()->setVertPath("model.obj");
+
+			torch::Tensor joints = SINGLE_SMPL::get()->getRestJoint();
+			std::cout << "joints " << joints.sizes() << std::endl;
 			//SINGLE_SMPL::get()->out(0); 
 		}
 		catch (std::exception& e)

@@ -30,9 +30,7 @@
  //===== INCLUDES ==============================================================
 
  //----------
-#include <tuple>
 #include <chrono>
-#include <tuple>
 #include "definition/def.h"
 #include "toolbox/Exception.h"
 #include "toolbox/TorchEx.hpp"
@@ -40,6 +38,8 @@
 #include "torch/script.h"
 using namespace torch::indexing;
 #include <exception>
+#include "cnpy.h"
+
 #include <opencv2/opencv.hpp>
 using namespace std;
 using namespace cv;
@@ -1867,12 +1867,326 @@ namespace smpl
 		}
 		myfile << *((ptr + 9));
 		myfile << "]\n]\n";
-        myfile << "}\n";
-            
-
+        myfile << "}\n";            
 
 
     }
+
+
+/*
+	def umeyama(src, dst, estimate_scale) 
+		References
+		----------
+		..[1] "Least-squares estimation of transformation parameters between two
+		point patterns", Shinji Umeyama, PAMI 1991, DOI: 10.1109/34.88573
+		"""
+
+		num = src.shape[0]
+		dim = src.shape[1]
+
+		# Compute mean of src and dst.
+		src_mean = src.mean(axis = 0)
+		dst_mean = dst.mean(axis = 0)
+
+		# Subtract mean from src and dst.
+		src_demean = src - src_mean
+		dst_demean = dst - dst_mean
+
+		# Eq. (38).
+		A = np.dot(dst_demean.T, src_demean) / num
+
+		# Eq. (39).
+		d = np.ones((dim, ), dtype = np.double)
+		if np.linalg.det(A) < 0:
+	d[dim - 1] = -1
+
+		T = np.eye(dim + 1, dtype = np.double)
+
+		U, S, V = np.linalg.svd(A)
+
+		# Eq. (40) and (43).
+		rank = np.linalg.matrix_rank(A)
+		if rank == 0:
+	return np.nan * T
+		elif rank == dim - 1 :
+		if np.linalg.det(U)* np.linalg.det(V) > 0:
+	T[:dim, : dim] = np.dot(U, V)
+		else :
+			s = d[dim - 1]
+			d[dim - 1] = -1
+			T[:dim, : dim] = np.dot(U, np.dot(np.diag(d), V))
+			d[dim - 1] = s
+		else:
+	T[:dim, : dim] = np.dot(U, np.dot(np.diag(d), V.T))
+
+		if estimate_scale :
+			# Eq. (41) and (42).
+			scale = 1.0 / src_demean.var(axis = 0).sum() * np.dot(S, d)
+		else:
+	scale = 1.0
+
+		# the python umeyama get a wrong rotation in some unknow condition
+		# so we compare the two results and choose the minimum
+		# it will be fixed in the future
+		homo_src = np.insert(src, 3, 1, axis = 1).T
+		rot = T[:dim, : dim]
+
+		rots = []
+		losses = []
+		for i in range(2) :
+			if i == 1 :
+				rot[:, : 2] *= -1
+				transform = np.eye(dim + 1, dtype = np.double)
+				transform[:dim, : dim] = rot * scale
+				transform[:dim, dim] = dst_mean - scale * np.dot(T[:dim, : dim], src_mean.T)
+				transed = np.dot(transform, homo_src).T[:, : 3]
+				loss = np.linalg.norm(transed - dst)
+				losses.append(loss)
+				rots.append(rot.copy())
+				# T[:dim, dim] = dst_mean - scale * np.dot(T[:dim, : dim], src_mean.T)
+				# T[:dim, : dim] *= scale
+				# print(T)
+
+				# since only the smpl parameters is needed, we return rotation, translation and scale
+				trans = dst_mean - scale * np.dot(T[:dim, : dim], src_mean.T)
+				if losses[0] > losses[1]:
+	rot = rots[1]
+				else:
+	rot = rots[0]
+
+		return rot, trans, scale
+        */
+    std::tuple<torch::Tensor, torch::Tensor> LinearBlendSkinning::umeyama(torch::Tensor src, torch::Tensor dst)
+    {
+// 		"""Estimate N-D similarity transformation with or without scaling.
+// 			Parameters
+// 			----------
+// 			src : (M, N) array
+// 			Source coordinates.
+// 			dst : (M, N) array
+// 			Destination coordinates.
+// 			estimate_scale : bool
+// 			Whether to estimate scaling factor.
+// 			Returns
+// 			------ -
+// 			T : (N + 1, N + 1)
+// 			The homogeneous similarity transformation matrix.The matrix contains
+// 			NaN values only if the problem is not well - conditioned.
+
+        int num = src.size(0);// [0] ;
+        int dim = src.size(1);
+		// Compute mean of src and dst.
+        torch::Tensor src_mean = src.mean(0);
+        if (SHOWOUT)
+        {
+            std::cout<<"src_mean" << src_mean << std::endl;
+        }
+        torch::Tensor dst_mean = dst.mean(0);
+		if (SHOWOUT)
+		{
+			std::cout <<"src_mean" << dst_mean << std::endl;
+		}
+
+		//# Subtract mean from src and dst.
+        torch::Tensor 	src_demean = src - src_mean;
+		if (SHOWOUT)
+		{
+			std::cout << "src_demean " << src_demean << std::endl;
+		}
+        torch::Tensor 	dst_demean = dst - dst_mean;
+		if (SHOWOUT)
+		{
+			std::cout << "dst_demean  " << dst_demean << std::endl;
+		}
+     
+
+        torch::Tensor 	A = torch::mm(torch::t(dst_demean), src_demean) / num;
+		if (SHOWOUT)
+		{
+			std::cout << "A" << A << std::endl;
+		}
+        torch::Tensor d = torch::ones({ dim });// , dtype = np.double)
+
+        //torch::linalg.det(A);
+		if (torch::linalg::det(A).item().toFloat() < 0)
+        {
+            d[dim - 1] = -1;
+        }
+		if (SHOWOUT)
+		{
+			std::cout <<"d" << torch::linalg::det(A).item().toFloat() << "d " << d << std::endl;
+		}
+
+        torch::Tensor 	T = torch::eye(dim + 1);// , dtype = np.double)
+
+		if (SHOWOUT)
+		{
+			std::cout << "T" << T << std::endl;
+		}
+        std::tuple<at::Tensor, at::Tensor, at::Tensor> t;
+        t = torch::svd(A);
+
+        torch::Tensor U = std::get<0>(t);
+        torch::Tensor S = std::get<1>(t);
+        torch::Tensor V = std::get<2>(t);
+        V = V.t();
+		if (SHOWOUT)
+		{
+			std::cout << "U" << U << std::endl;
+            std::cout << "S" << S << std::endl;
+            std::cout << "V" << V << std::endl;
+		}
+
+
+        int rank = torch::linalg::matrix_rank(A, 0 ,true).item().toInt();//anzs
+
+        if (rank == dim - 1)
+        {
+            if ((torch::linalg::det(U) * torch::linalg::det(V)).item().toInt() > 0)
+            {
+                T.index({Slice(None,dim), Slice(None,dim)}) = torch::dot(U, V);
+            }       
+            else
+            {
+                torch::Tensor s = d[dim - 1];
+                d[dim - 1] = -1;
+                T.index({Slice(None, dim), Slice(None, dim)}) = torch::dot(U, torch::dot(torch::diag(d), V));
+                d[dim - 1] = s;
+            }
+         }
+        else
+        {
+            T.index({Slice(None,dim), Slice(None, dim)}) = torch::mm(U, torch::mm(torch::diag(d), V.transpose(0,1)));
+			if (SHOWOUT)
+			{
+				std::cout << "T" << T << std::endl;
+			}
+
+         }
+
+        float scale = 1.0f;
+
+        /* Is there a way to insert a tensor into an existing tensor? 
+        * https://discuss.pytorch.org/t/is-there-a-way-to-insert-a-tensor-into-an-existing-tensor/14642
+		* a = torch.rand(3, 4)
+        b = torch.zeros(1, 4)
+
+        idx = 1
+        c = torch.cat([a[:idx], b, a[idx:]], 0)
+        */
+
+        torch::Tensor homo_src;
+        //torch::Tensor homo_src = torch::cat(src, 3, 1, 1).T; //在第三列上插入1
+        torch::Tensor src_t = src.t();// index({ Slice(None,3) });
+        torch::Tensor last_one_row = torch::ones({1, src_t.size(1) });
+        homo_src = torch::cat({ src_t,last_one_row }, 0);
+		if (SHOWOUT)
+		{
+			std::cout << "src" << src << std::endl;
+            std::cout << "src_t" << src_t << std::endl;
+            std::cout << "last_one_row" << last_one_row << std::endl;
+            std::cout << "homo_src" << homo_src << std::endl;
+		}
+    
+        torch::Tensor  rot = T.index({Slice(None,dim),Slice(None,dim)});// [:dim, : dim] ;
+        if (SHOWOUT)
+        {
+            std::cout << "rot" << rot << std::endl;
+        }
+
+        std::vector< torch::Tensor> rots;// = [];
+        std::vector< float>	losses;// = []
+        for (int i = 0; i < 2; i++)
+        {
+            if (i == 1)
+            {
+                //rot.index({Slice(), Slice(None,2)})/*[:, : 2] */ *= -1;
+                rot.index({ Slice(), Slice(None,2) }) *= -1;
+				if (SHOWOUT)
+				{
+					std::cout << "rot" << rot << std::endl;
+				}
+            }
+            //transform = np.eye(dim + 1, dtype = np.double)
+            torch::Tensor transform = torch::eye(dim + 1);
+            transform.index({ Slice(None,dim),Slice(None,dim) }) = rot * scale;                        
+			if (SHOWOUT)
+			{
+				std::cout << "transform" << transform << std::endl;
+
+                std::cout << "src_mean.t()" << src_mean.t().reshape({ -1, 1 }) << std::endl;
+
+                torch::Tensor ttt = T.index({ Slice(None,dim), Slice(None,dim) });
+                std::cout << "ttt" << ttt << std::endl;
+                
+			}
+
+            
+			if (SHOWOUT)
+			{
+				torch::Tensor tttt = torch::mm(T.index({ Slice(None,dim), Slice(None,dim) }), src_mean.t().reshape({ -1, 1 }));
+				//torch::Tensor ttt = T.index({ Slice(None,dim), Slice(None,dim) });
+				std::cout << "ttt" << tttt << std::endl;
+			}
+
+            //transform[:dim,dim] = dst_mean - scale * np.dot(T[:dim, :dim], src_mean.T)
+            try
+            {               
+                transform.index({ Slice(None, dim),dim }) = dst_mean - scale * torch::mm(T.index({ Slice(None,dim), Slice(None,dim) }), src_mean.t().reshape({ -1, 1 })).squeeze();
+            }
+            catch (const std::exception& e)
+            {
+                std::cout << e.what() << std::endl;
+                throw;
+            }
+            if (SHOWOUT)
+            {
+                std::cout << "transform" << transform << std::endl;
+            }
+            
+
+            torch::Tensor transed = torch::mm(transform, homo_src).t().index({Slice(), Slice(None, 3)});// [:, : 3]
+            float loss = torch::norm(transed - dst, 2).item().toFloat();
+            //losses.append(loss);
+            losses.push_back(loss);
+            //rots.append(rot.copy())
+            rots.push_back(rot.clone());
+
+        }
+
+		//# since only the smpl parameters is needed, we return rotation, translation and scale
+	//# since only the smpl parameters is needed, we return rotation, translation and scale
+        torch::Tensor  trans;
+        try {
+              trans = dst_mean - scale * torch::mm(T.index({ Slice(None, dim),Slice(None,dim) }), src_mean.t().reshape({ -1, 1 })).squeeze();// [:dim, : dim] , src_mean.T)
+        }
+		catch (const std::exception& e)
+		{
+			std::cout << e.what() << std::endl;
+			throw;
+		}
+        if (losses[0] > losses[1])
+        {
+            rot = rots[1];
+        }            
+        else
+        {
+            rot = rots[0];
+        }      
+		if (SHOWOUT)
+		{
+			std::cout << "trans" << trans << std::endl;
+            std::cout << "rot" << rot << std::endl;
+		}
+
+
+        std::tuple<torch::Tensor, torch::Tensor> result = std::make_tuple(rot, trans);
+
+        //, trans, scale
+        return result;
+
+    }
+
 
 
     using ms = std::chrono::milliseconds;
@@ -1889,7 +2203,8 @@ namespace smpl
         const torch::Tensor& J_regressor_h36m,
         const torch::Tensor& parents,
         const torch::Tensor& children,
-        const torch::Tensor& lbs_weights)
+        const torch::Tensor& lbs_weights,
+        const torch::Tensor& restJoints_24)
     {
         if (SHOWOUT)
         {
@@ -2015,9 +2330,103 @@ namespace smpl
         std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
 
         std::vector<person*>  g_persons;
+
+        //joints = (kpts_v[0, [16, 17, 1, 2, 12, 0]]).cpu() //#12: neck, 0 : pelvis
+
+        torch::Tensor joint0 = restJoints_24.index({ 0 });
+		if (SHOWOUT)
+		{
+			std::cout << "joint0 ;" << joint0 << std::endl;
+		}
+        torch::Tensor b = torch::tensor({ 16, 17, 1, 2, 12, 0 });
+        torch::Tensor joints = restJoints_24.index({ 0,{b} }).cpu();// [16] [17] .cpu();
+        if (SHOWOUT)
+        {
+            std::cout << "joints;" << joints << std::endl;
+        }
+
+	    torch::Tensor joints3d = pose_skeleton.index({ 0,{b} }).cpu();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
+		if (SHOWOUT)
+		{
+			std::cout << "joints3d;" << joints3d << std::endl;
+		}
+        std::tuple<torch::Tensor, torch::Tensor> rot_trans = umeyama(joints, joints3d);
+
+        torch::Tensor rot_global = std::get<0>(rot_trans);
+        torch::Tensor trans_global = std::get<1>(rot_trans);
+		if (SHOWOUT)
+		{
+			std::cout << "trans_global" << trans_global << std::endl;
+		}
+
+        cv::Mat dst;
+        try
+        {
+            rot_global = rot_global.reshape({ 9,1 });
+			if (SHOWOUT)
+			{
+				std::cout << "rot_global" << rot_global << std::endl;
+			}
+            auto tttt0 = rot_global.index({ Slice(0,9)}).to(torch::kFloat);// .item();
+            auto x0 = tttt0.index({ 0 }).item().toFloat();
+            auto x1 = tttt0.index({ 1 }).item().toFloat();
+            auto x2 = tttt0.index({ 2 }).item().toFloat();
+
+			auto x3 = tttt0.index({ 3 }).item().toFloat();
+			auto x4 = tttt0.index({ 4 }).item().toFloat();
+			auto x5 = tttt0.index({ 5 }).item().toFloat();
+
+			auto x6 = tttt0.index({ 6 }).item().toFloat();
+			auto x7 = tttt0.index({ 7 }).item().toFloat();
+			auto x8 = tttt0.index({ 8 }).item().toFloat();
+
+
+            cv::Mat src = (Mat_<float>(3, 3)<< x0, x1,x2, x3, x4, x5, x6, x7, x8);
+            //src(0, 0) = 0;
+            
+ 			cv::Rodrigues(src, dst);
+			if (SHOWOUT)
+			{
+				//std::cout << "tttt" << tttt0 << std::endl;
+				if (SHOWOUT)
+				{
+					std::cout<<"dst_rot" << dst << std::endl;
+                    //std::cout << "dst_rot" << dst(0).dims << std::endl;
+                    //std::cout << "dst_rot" << dst(1).dims << std::endl;
+				}
+			}
+
+
+        }
+        catch (const exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            throw;
+        }
+		
+        dst = dst.reshape(1, 3);
+        torch::Tensor rot = torch::from_blob(dst.data, { 1, 3 }, torch::kFloat);
+		if (SHOWOUT)
+		{
+			std::cout << "rot" << rot << std::endl;
+		}
+
+
+//		auto x = trans_global.index({ 0 }).to(torch::kFloat).item();
+		//float xx = x.toFloat();
+        
+
+        //torch::Tensor rot_last = cv2.Rodrigues(rot_global)[0].reshape(1, 3)
+
+
+
+// 		joints3d = torch.squeeze(joints3d)
+// 			joints3d = np.array(joints3d)
+
+		
         int id = 0;
-        torch::Tensor Rh = torch::tensor({ 1.0f, 1.0f, 1.0f });
-        torch::Tensor Th = torch::tensor({ 0.3, 0.3, 0.3 });
+        torch::Tensor Rh = rot;// torch::tensor({ 1.0f, 1.0f, 1.0f });
+        torch::Tensor Th = trans_global;// torch::tensor({ 0.3, 0.3, 0.3 });
         torch::Tensor shapes = torch::zeros({10});
         quat = quat.to(torch::kCPU);
         person* p = new person(id, Rh, Th,quat,shapes);
@@ -2029,7 +2438,7 @@ namespace smpl
 		/*torch::Tensor*/ shapes = torch::zeros({ 10 });
 		quat = quat.to(torch::kCPU);
 		person* p2 = new person(id, Rh, Th, quat, shapes);
-		g_persons.push_back(p2);
+		//g_persons.push_back(p2);
 
 
 
