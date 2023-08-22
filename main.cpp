@@ -110,7 +110,7 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
         std::cout << "convert " << convert << std::endl;
 
     }
-    std::cout << "convert " << convert << std::endl;
+    //std::cout << "convert " << convert << std::endl;
     return convert;
 
 }
@@ -121,59 +121,102 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //float x = 
     //torch::Tensor c1 = k4a2torch_float(1.0f, 2.0f, 3.0f);;//source25[8].xyz.x, source25[8].xyz.y, source25[8].xyz.z);
 
-    std::vector<float> v;
-    v.push_back(source25[8].xyz.x);
-    v.push_back(source25[8].xyz.y);
-    v.push_back(source25[8].xyz.z);
-    torch::Tensor convert = torch::from_blob(v.data(), { 1, 3 });
-    if (SHOWOUT)
-    {
-        std::cout << "convert " << convert << std::endl;
+    //std::vector<float> v;
+    //v.push_back(source25[8].xyz.x);
+    //v.push_back(source25[8].xyz.y);
+    //v.push_back(source25[8].xyz.z);
+    //torch::Tensor convert = torch::from_blob(v.data(), { 1, 3 });
+    //if (SHOWOUT)
+    //{
+    //    std::cout << "convert " << convert << std::endl;
 
-    }
+    //}
 
-    torch::Tensor c0 = k4a2torch_float(source25[8].xyz.x, source25[8].xyz.y, source25[8].xyz.z);  // pelvis = MidHip
-    target29.push_back(convert);
+    torch::Tensor convert = k4a2torch_float(source25[8].xyz.x, source25[8].xyz.y, source25[8].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);        
+
     //target29[1] = source25[12];  //left_hip = LHip
+    convert = k4a2torch_float(source25[12].xyz.x, source25[12].xyz.y, source25[12].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
+    
     //target29[2] = source25[9];  // right_hip = RHip
-    ////spine = source25[:, 1] - source25[:, 8]  # spine = (Neck - MidHip)
+    convert = k4a2torch_float(source25[9].xyz.x, source25[9].xyz.y, source25[9].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
 
-    //k4a_float3_t spine; //source25[1] - source25[8]  // spine = (Neck - MidHip)
-    //spine.v[0] = (source25[1].v[0] - source25[8].v[0]);
-    //spine.v[1] = (source25[1].v[1] - source25[8].v[1]); 
-    //spine.v[2] = (source25[1].v[2] - source25[8].v[2]);
 
-    ////target29[:,3] = source25[:,8] + spine / 4  # spine1 = MidHip + (Neck - MidHip)/4
-    //target29[3].v[0] = source25[8].v[0] + spine.v[0] / 4;
-    //target29[3].v[1] = source25[8].v[1] + spine.v[1] / 4;
-    //target29[3].v[2] = source25[8].v[2] + spine.v[2] / 4;
+    //spine = source25[:, 1] - source25[:, 8]  # spine = (Neck - MidHip)
 
+    k4a_float3_t spine; //source25[1] - source25[8]  // spine = (Neck - MidHip)
+    spine.v[0] = (source25[1].v[0] - source25[8].v[0]);
+    spine.v[1] = (source25[1].v[1] - source25[8].v[1]); 
+    spine.v[2] = (source25[1].v[2] - source25[8].v[2]);
+
+    //target29[:,3] = source25[:,8] + spine / 4  # spine1 = MidHip + (Neck - MidHip)/4
+    /*target29[3].v[0] = source25[8].v[0] + spine.v[0] / 4;
+    target29[3].v[1] = source25[8].v[1] + spine.v[1] / 4;
+    target29[3].v[2] = source25[8].v[2] + spine.v[2] / 4;*/
+    convert = k4a2torch_float(source25[8].xyz.x + spine.xyz.x / 4, source25[8].v[1] + spine.v[1] / 4, source25[8].v[2] + spine.v[2] / 4);
+    target29.push_back(convert);
 
     //target29[4] = source25[13];  // left_knee = 13, “LKnee”
+    convert = k4a2torch_float(source25[13].xyz.x, source25[13].xyz.y, source25[13].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
+   
     //target29[5] = source25[10];  // right_knee = 10, “RKnee”
+    convert = k4a2torch_float(source25[10].xyz.x, source25[10].xyz.y, source25[10].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
 
-    ////target29[:, 6] = source25[:, 8] + spine / 3  # spine2 = MidHip + (Neck - MidHip) / 3
-    //target29[6].v[0] = source25[8].v[0] + spine.v[0] / 3;
-    //target29[6].v[1] = source25[8].v[1] + spine.v[1] / 3;
-    //target29[6].v[2] = source25[8].v[2] + spine.v[2] / 3;
+    //target29[:, 6] = source25[:, 8] + spine / 3  # spine2 = MidHip + (Neck - MidHip) / 3
+    /*target29[6].v[0] = source25[8].v[0] + spine.v[0] / 3;
+    target29[6].v[1] = source25[8].v[1] + spine.v[1] / 3;
+    target29[6].v[2] = source25[8].v[2] + spine.v[2] / 3;*/
+    convert = k4a2torch_float(source25[8].v[0] + spine.v[0] / 3, source25[8].v[1] + spine.v[1] / 3, source25[8].v[2] + spine.v[2] / 3);  // pelvis = MidHip
+    target29.push_back(convert);
+
 
     //target29[7] = source25[14];  // left_ankle = 14, “LAnkle”
-    //target29[8] = source25[11];  // right_ankle = 11, “RAnkle”
-    ////target29[:, 9] = source25[:, 8] + spine / 2  # spine3 = MidHip + (Neck - MidHip) / 2
-    //target29[9].v[0] = source25[8].v[0] + spine.v[0] / 2;
-    //target29[9].v[1] = source25[8].v[1] + spine.v[1] / 2;
-    //target29[9].v[2] = source25[8].v[2] + spine.v[2] / 2;
+    convert = k4a2torch_float(source25[14].xyz.x, source25[14].xyz.y, source25[14].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
 
-    //k4a_float3_t left_leg; // = target29[:, 7] - target29[:, 4]
+    //target29[8] = source25[11];  // right_ankle = 11, “RAnkle”
+    convert = k4a2torch_float(source25[11].xyz.x, source25[11].xyz.y, source25[11].xyz.z);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
+    //target29[:, 9] = source25[:, 8] + spine / 2  # spine3 = MidHip + (Neck - MidHip) / 2
+    /*target29[9].v[0] = source25[8].v[0] + spine.v[0] / 2;
+    target29[9].v[1] = source25[8].v[1] + spine.v[1] / 2;
+    target29[9].v[2] = source25[8].v[2] + spine.v[2] / 2;*/
+    convert = k4a2torch_float(source25[8].v[0] + spine.v[0] / 2, source25[8].v[1] + spine.v[1] / 2, source25[8].v[2] + spine.v[2] / 2);  // pelvis = MidHip
+    target29.push_back(convert);
+    
+    //target29[7] = source25[14];
+    // target29[4] = source25[13]；
+    k4a_float3_t left_leg; // = target29[:, 7] - target29[:, 4]
     //left_leg.v[0] = target29[7].v[0] - target29[4].v[0];
     //left_leg.v[1] = target29[7].v[1] - target29[4].v[1];
     //left_leg.v[2] = target29[7].v[2] - target29[4].v[2];
+    //改成：
+    left_leg.v[0] = source25[14].v[0] - source25[13].v[0];
+    left_leg.v[1] = source25[14].v[1] - source25[13].v[1];
+    left_leg.v[2] = source25[14].v[2] - source25[13].v[2];
+
+    //convert = k4a2torch_float(left_leg.xyz.x, left_leg.xyz.y, left_leg.xyz.z);  // pelvis = MidHip
+    //target29.push_back(convert);
 
 
-    //k4a_float3_t  right_leg;// = target29[:, 8] - target29[:, 5]
+
+   //target29[8] = source25[11];
+   //target29[5] = source25[10];
+
+    k4a_float3_t  right_leg;// = target29[:, 8] - target29[:, 5]
     //right_leg.v[0] = target29[8].v[0] - target29[5].v[0];
     //right_leg.v[1] = target29[8].v[1] - target29[5].v[1];
     //right_leg.v[2] = target29[8].v[2] - target29[5].v[2];
+    //改成：
+    right_leg.v[0] = source25[11].v[0] - source25[10].v[0];
+    right_leg.v[1] = source25[11].v[1] - source25[10].v[1];
+    right_leg.v[2] = source25[11].v[2] - source25[10].v[2];
 
 
     ////target29[:, 10] = target29[:, 7] + left_leg * 0.01
@@ -181,10 +224,16 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //target29[10].v[1] = target29[7].v[1] + left_leg.v[1] * 0.01;
     //target29[10].v[2] = target29[7].v[2] + left_leg.v[2] * 0.01;
 
+    convert = k4a2torch_float(source25[14].v[0] + left_leg.v[0] * 0.01, source25[14].v[1] + left_leg.v[1] * 0.01, source25[14].v[2] + left_leg.v[2] * 0.01);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
     ////target29[:, 11] = target29[:, 8] + right_leg * 0.01;
     //target29[11].v[0] = target29[8].v[0] + right_leg.v[0] * 0.01;
     //target29[11].v[1] = target29[8].v[1] + right_leg.v[1] * 0.01;
     //target29[11].v[2] = target29[8].v[2] + right_leg.v[2] * 0.01;
+    convert = k4a2torch_float(source25[11].v[0] + right_leg.v[0] * 0.01, source25[11].v[1] + right_leg.v[1] * 0.01, source25[11].v[1] + right_leg.v[1] * 0.01);  // pelvis = MidHip
+    target29.push_back(convert);
 
 
 
@@ -194,8 +243,12 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     ////target29[:, 11] = target29[:, 8] + right_leg * 0.01#(source25[:, 24] * 1.0 + source25[:, 11] * 0.0) #target29[:, 8] + right_leg * 0.000001 #source25[:, 24]#(source25[:, 22] + source25[:, 24]) / 2  # right_foot = 24, “RHeel" 11, “RAnkle”  22, “RBigToe”
 
     //target29[12] = source25[1];  //# neck = 1, “Neck”
+    convert = k4a2torch_float(source25[1].v[0], source25[1].v[1], source25[1].v[1]);  // pelvis = MidHip
+    target29.push_back(convert);
+
 
     ////left_collar_low = (target29[:, 9] + source25[:, 5]) / 2  // 5, “LShoulder”
+    ////target29[9].v[0] = source25[8].v[0] + spine.v[0] / 2; 
     //k4a_float3_t left_collar_low; 
     //left_collar_low.v[0] = (target29[9].v[0] + source25[5].v[0]) / 2;
     //left_collar_low.v[1] = (target29[9].v[1] + source25[5].v[1]) / 2;
@@ -213,8 +266,17 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //left_collar.v[0] = (left_collar_low.v[0] + left_collar_high.v[0]) / 2;
     //left_collar.v[1] = (left_collar_low.v[1] + left_collar_high.v[1]) / 2;
     //left_collar.v[2] = (left_collar_low.v[2] + left_collar_high.v[2]) / 2;
+    //改成：
+    k4a_float3_t left_collar;
+    left_collar.v[0] = ((source25[8].v[0] + spine.v[0] / 2 + source25[5].v[0]) / 2 + (source25[1].v[0] + source25[5].v[0]) / 2) / 2;
+    left_collar.v[1] = ((source25[8].v[1] + spine.v[1] / 2 + source25[5].v[1]) / 2 + (source25[1].v[1] + source25[5].v[1]) / 2) / 2;
+    left_collar.v[2] = ((source25[8].v[2] + spine.v[2] / 2 + source25[5].v[2]) / 2 + (source25[1].v[2] + source25[5].v[2]) / 2) / 2;
+
+
 
     //target29[13] = left_collar; //  # 'left_collar'
+    convert = k4a2torch_float(left_collar.v[0], left_collar.v[1], left_collar.v[1]);  // pelvis = MidHip
+    target29.push_back(convert);
 
 
     ////# right_collar_low = (spin3 + right_shoulder) / 2
@@ -222,6 +284,12 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //right_collar_low.v[0] = (target29[9].v[0] + source25[2].v[0]) / 2;  //# 2, “RShoulder”
     //right_collar_low.v[1] = (target29[9].v[1] + source25[2].v[1]) / 2;
     //right_collar_low.v[2] = (target29[9].v[2] + source25[2].v[2]) / 2;
+    //改成：
+    k4a_float3_t right_collar_low;
+    right_collar_low.v[0] = (source25[8].v[0] + spine.v[0] / 2 + source25[2].v[0]) / 2;  //# 2, “rshoulder”
+    right_collar_low.v[1] = (source25[8].v[1] + spine.v[1] / 2 + source25[2].v[1]) / 2;
+    right_collar_low.v[2] = (source25[8].v[2] + spine.v[2] / 2 + source25[2].v[2]) / 2;
+
 
     //
     ////# right_collar_high = (neck + right_shoulder) / 2
@@ -229,29 +297,116 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //right_collar_high.v[0] = (source25[1].v[0] + source25[2].v[0]) / 2;
     //right_collar_high.v[1] = (source25[1].v[1] + source25[2].v[1]) / 2;
     //right_collar_high.v[2] = (source25[1].v[2] + source25[2].v[2]) / 2;
+    //改成：
+    k4a_float3_t right_collar_high;
+    right_collar_high.v[0] = (source25[1].v[0] + source25[2].v[0]) / 2;
+    right_collar_high.v[1] = (source25[1].v[1] + source25[2].v[1]) / 2;
+    right_collar_high.v[2] = (source25[1].v[2] + source25[2].v[2]) / 2;
 
 
     //k4a_float3_t right_collar;
     //right_collar.v[0] = (right_collar_low.v[0] + right_collar_high.v[0]) / 2;
     //right_collar.v[1] = (right_collar_low.v[1] + right_collar_high.v[1]) / 2;
     //right_collar.v[2] = (right_collar_low.v[2] + right_collar_high.v[2]) / 2;
+    //改成：
+    k4a_float3_t right_collar;
+    right_collar.v[0] = (right_collar_low.v[0] + right_collar_high.v[0]) / 2;
+    right_collar.v[1] = (right_collar_low.v[1] + right_collar_high.v[1]) / 2;
+    right_collar.v[2] = (right_collar_low.v[2] + right_collar_high.v[2]) / 2;
 
     //target29[14] = right_collar;  //# 'right_collar'
+    convert = k4a2torch_float(right_collar.v[0], right_collar.v[1], right_collar.v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
 
     //target29[15].v[0] = (source25[0].v[0] + source25[1].v[0]) / 2; //# 'jaw' = { 0, “Nose” }, { 1, “Neck” },
     //target29[15].v[1] = (source25[0].v[1] + source25[1].v[1]) / 2;
     //target29[15].v[2] = (source25[0].v[2] + source25[1].v[2]) / 2;
 
+    convert = k4a2torch_float((source25[0].v[0] + source25[1].v[0]) / 2, (source25[0].v[1] + source25[1].v[1]) / 2, (source25[0].v[2] + source25[1].v[2]) / 2);  // pelvis = MidHip
+    target29.push_back(convert);
+
     //
     //target29[16] = source25[5];    // 'left_shoulder', 5, “LShoulder”
+    convert = k4a2torch_float(source25[5].v[0] , source25[5].v[1], source25[5].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
     //target29[17] = source25[2];   // 'right_shoulder', 2, “RShoulder”
+    convert = k4a2torch_float(source25[2].v[0], source25[2].v[1], source25[2].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
 
     //target29[18] = source25[6];  // 'left_elbow', 6, “LElbow”
+    convert = k4a2torch_float(source25[6].v[0], source25[6].v[1], source25[6].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
     //target29[19] = source25[3];  //# 'right_elbow', 3, “RElbow”
+    convert = k4a2torch_float(source25[3].v[0], source25[3].v[1], source25[3].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
 
     //target29[20] = source25[7];  //'left_wrist', 7, “LWrist”
+    convert = k4a2torch_float(source25[7].v[0], source25[7].v[1], source25[7].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
     //target29[21] = source25[4];  // 'right_wrist', 4, “RWrist”
-    
+    convert = k4a2torch_float(source25[4].v[0], source25[4].v[1], source25[4].v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
+    //后来加的
+    //# left_thumb = extend elbow and wrist
+    // extend = (wrist - elbow)
+    //target29[20] = source25[7];
+    //target29[18] = source25[6]
+    k4a_float3_t extend_left;// = source25[7]- source25[6]
+    extend_left.v[0] = source25[7].v[0] - source25[6].v[0];
+    extend_left.v[1] = source25[7].v[1] - source25[6].v[1];
+    extend_left.v[2] = source25[7].v[2] - source25[6].v[2];
+
+
+    //#extend 0.3 * extend
+    //target29[20] = source25[7];
+
+    //target29[:, 22] = target29[:, 20] + 0.2 * extend_left#source25[:, 7]  # 'left_thumb', 7, “LWrist”
+    convert = k4a2torch_float(source25[7].v[0] + 0.2 * extend_left.v[0], source25[7].v[1] + 0.2 * extend_left.v[1], source25[7].v[2] + 0.2 * extend_left.v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
+    //target29[21] = source25[4];  
+    //target29[19] = source25[3];
+    k4a_float3_t extend_right;// = target29[:, 21] - target29[:, 19]
+    extend_right.v[0] = source25[4].v[0] - source25[3].v[0];
+    extend_right.v[1] = source25[4].v[1] - source25[3].v[1];
+    extend_right.v[2] = source25[4].v[2] - source25[3].v[2];
+       
+    //target29[:, 23] = target29[:, 21] + 0.2 * extend_right#source25[:, 4]  # 'right_thumb', 4, “RWrist”
+    convert = k4a2torch_float(source25[4].v[0] + 0.2 * extend_right.v[0], source25[4].v[1] + 0.2 * extend_right.v[1], source25[4].v[2] + 0.2 * extend_right.v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
+    //target29[:, 24] = (source25[:, 15] + source25[:, 16]) / 2  // 'head', { 15, “REye” }, { 16, “LEye” },
+    convert = k4a2torch_float((source25[15].v[0] + source25[16].v[0]) / 2, (source25[15].v[1] + source25[16].v[1]) / 2, (source25[15].v[2] + source25[16].v[2]) / 2);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
+    //target29[:, 25] = target29[:, 22] + 0.2 * extend_left; //left_middle = # left_middle = left_thumb
+    convert = k4a2torch_float((source25[15].v[0] + source25[16].v[0]) / 2, (source25[15].v[1] + source25[16].v[1]) / 2, (source25[15].v[2] + source25[16].v[2]) / 2);  // pelvis = MidHip
+    target29.push_back(convert);
+
+    //target29[21] = source25[4]
+    //target29[:, 23] = target29[:, 21] + 0.2 * extend_right
+
+    //target29[:, 26] = target29[:, 23] + 0.2 * extend_right;  // right_middle = right_thumb
+    convert = k4a2torch_float(source25[4].v[0] + 0.2 * extend_right.v[0], source25[4].v[1] + 0.2 * extend_right.v[1], source25[4].v[2] + 0.2 * extend_right.v[2]);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
+    //target29[:, 27] = (source25[:, 19] + source25[:, 20]) / 2; //source25[:, 21] + source25[:, 19] #left_bigtoe = 19, “LBigToe” 20, “LSmallToe”
+    convert = k4a2torch_float((source25[19].v[0] + source25[20].v[0]) / 2, (source25[19].v[1] + source25[20].v[1]) / 2, (source25[19].v[2] + source25[20].v[2]) / 2);  // pelvis = MidHip
+    target29.push_back(convert);
+
+
+    //target29[:, 28] = (source25[:, 22] + source25[:, 23]) / 2; //source25[:, 24] + source25[:, 22] # right_bigtoe = 22, “RBigToe” 23, “RSmallToe”
+    convert = k4a2torch_float((source25[22].v[0] + source25[23].v[0]) / 2, (source25[22].v[1] + source25[23].v[1]) / 2, (source25[22].v[2] + source25[23].v[2]) / 2);
+    target29.push_back(convert);
     return target29;
 }
 
