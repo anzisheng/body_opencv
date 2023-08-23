@@ -916,7 +916,7 @@ void SMPL::getSkeleton(int64_t index,
     return;
 }
 
-void SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas, const torch::Tensor& restJoints_24)
+void SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas, const torch::Tensor& restJoints_24,int frameId)
 {
     batch_size = pose_skeleton.size(0);
 
@@ -963,7 +963,8 @@ void SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas
         m_parents,
         m_children,
         m__weights,
-        restJoints_24
+        restJoints_24,
+        frameId
     );
 
 

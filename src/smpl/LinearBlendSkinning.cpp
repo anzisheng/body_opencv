@@ -2204,7 +2204,9 @@ namespace smpl
         const torch::Tensor& parents,
         const torch::Tensor& children,
         const torch::Tensor& lbs_weights,
-        const torch::Tensor& restJoints_24)
+        const torch::Tensor& restJoints_24,
+        int frameId
+        )
     {
         if (SHOWOUT)
         {
@@ -2320,6 +2322,9 @@ namespace smpl
             std::cout << "quat2" << quat << std::endl;
         }
         quat = quat.reshape(72);
+        quat.index({ Slice(0,3) }) = 0;// # 调整初始位置
+        quat.index({ Slice(21,27) }) = 0;
+        quat.index({ Slice(69,72) }) = 0;
         if (SHOWOUT)
         {
             std::cout << "quat3" << quat << std::endl;
@@ -2441,11 +2446,14 @@ namespace smpl
 		//g_persons.push_back(p2);
 
 
+        char ss[7];
+        sprintf(ss, "%06d", frameId);
+        //return ss;
 
-
+        string file = string("x64\\debug\\data\\") + string(ss) + ".json";
         
 
-        ofstream myfile2("data/000000.json");
+        ofstream myfile2(file);
         write_persons(g_persons, myfile2);
         myfile2.close();
 

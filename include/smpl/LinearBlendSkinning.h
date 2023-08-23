@@ -299,7 +299,8 @@ public: // PUBLIC METHODS
 		const torch::Tensor& parents,
 		const torch::Tensor& children,
 		const torch::Tensor& lbs_weights,
-		const torch::Tensor& restJoints_24);// dtype = torch.float32, train = False, leaf_thetas = None)
+		const torch::Tensor& restJoints_24,
+		int frameId);// dtype = torch.float32, train = False, leaf_thetas = None)
 
 
 	torch::Tensor batch_inverse_kinematics_transform(

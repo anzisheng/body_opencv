@@ -111,7 +111,7 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
 
     }
     //std::cout << "convert " << convert << std::endl;
-    return convert;
+    return convert.clone();
 
 }
 
@@ -133,8 +133,17 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //}
 
     torch::Tensor convert = k4a2torch_float(source25[8].xyz.x, source25[8].xyz.y, source25[8].xyz.z);  // pelvis = MidHip
-    target29.push_back(convert);        
+    if (SHOWOUT)
+    {
+        std::cout << "convert1 " << convert << std::endl;
 
+    }
+    target29.push_back(convert);        
+    if (SHOWOUT)
+    {
+        std::cout << "convert2 " << convert << std::endl;
+
+    }
     //target29[1] = source25[12];  //left_hip = LHip
     convert = k4a2torch_float(source25[12].xyz.x, source25[12].xyz.y, source25[12].xyz.z);  // pelvis = MidHip
     target29.push_back(convert);
@@ -155,7 +164,7 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     /*target29[3].v[0] = source25[8].v[0] + spine.v[0] / 4;
     target29[3].v[1] = source25[8].v[1] + spine.v[1] / 4;
     target29[3].v[2] = source25[8].v[2] + spine.v[2] / 4;*/
-    convert = k4a2torch_float(source25[8].xyz.x + spine.xyz.x / 4, source25[8].v[1] + spine.v[1] / 4, source25[8].v[2] + spine.v[2] / 4);
+    convert = k4a2torch_float(source25[8].v[0] + spine.v[0]/ 4, source25[8].v[1] + spine.v[1] / 4, source25[8].v[2] + spine.v[2] / 4);
     target29.push_back(convert);
 
     //target29[4] = source25[13];  // left_knee = 13, ¡°LKnee¡±
@@ -232,7 +241,7 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     //target29[11].v[0] = target29[8].v[0] + right_leg.v[0] * 0.01;
     //target29[11].v[1] = target29[8].v[1] + right_leg.v[1] * 0.01;
     //target29[11].v[2] = target29[8].v[2] + right_leg.v[2] * 0.01;
-    convert = k4a2torch_float(source25[11].v[0] + right_leg.v[0] * 0.01, source25[11].v[1] + right_leg.v[1] * 0.01, source25[11].v[1] + right_leg.v[1] * 0.01);  // pelvis = MidHip
+    convert = k4a2torch_float(source25[11].v[0] + right_leg.v[0] * 0.01, source25[11].v[1] + right_leg.v[1] * 0.01, source25[11].v[1] + right_leg.v[2] * 0.01);  // pelvis = MidHip
     target29.push_back(convert);
 
 
@@ -243,7 +252,7 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     ////target29[:, 11] = target29[:, 8] + right_leg * 0.01#(source25[:, 24] * 1.0 + source25[:, 11] * 0.0) #target29[:, 8] + right_leg * 0.000001 #source25[:, 24]#(source25[:, 22] + source25[:, 24]) / 2  # right_foot = 24, ¡°RHeel" 11, ¡°RAnkle¡±  22, ¡°RBigToe¡±
 
     //target29[12] = source25[1];  //# neck = 1, ¡°Neck¡±
-    convert = k4a2torch_float(source25[1].v[0], source25[1].v[1], source25[1].v[1]);  // pelvis = MidHip
+    convert = k4a2torch_float(source25[1].v[0], source25[1].v[1], source25[1].v[2]);  // pelvis = MidHip
     target29.push_back(convert);
 
 
@@ -275,7 +284,7 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
 
 
     //target29[13] = left_collar; //  # 'left_collar'
-    convert = k4a2torch_float(left_collar.v[0], left_collar.v[1], left_collar.v[1]);  // pelvis = MidHip
+    convert = k4a2torch_float(left_collar.v[0], left_collar.v[1], left_collar.v[2]);  // pelvis = MidHip ...
     target29.push_back(convert);
 
 
@@ -492,7 +501,9 @@ int main(int argc, char const* argv[])
         return -1;
     }
 
-    while(true)
+    int frameId = 0;
+
+    while(frameId < 200)
     {
         k4a_capture_t sensor_capture;
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -718,6 +729,7 @@ int main(int argc, char const* argv[])
                 {24, ¡°RHeel¡±}
 
                */
+                
                 //anzs
                 //step1: get 25 kps of openpose
                 std::vector< k4a_float3_t> source25;
@@ -753,9 +765,14 @@ int main(int argc, char const* argv[])
 
                 //step2: convert25-->29.
                 std::vector<torch::Tensor> target29 = convert25_29(source25);
+                torch::Tensor target29_tensor = torch::stack(target29, 1);
+                target29_tensor = target29_tensor / 800;
+
+                //target29_tensor = target29_tensor.index({ Slice(),Slice(1),Slice(2) });
                 if (SHOWOUT)
                 {
-                    std::cout << "target29 " << target29 << std::endl;
+                    std::cout << "target29 " << target29_tensor << std::endl;
+
                 }
                 
 
@@ -765,7 +782,7 @@ int main(int argc, char const* argv[])
 
 				if (torch::cuda::is_available())
 				{
-					device_type = torch::kCUDA;
+                    device_type = torch::kCPU;// torch::kCUDA;
 				}
 				else
 				{
@@ -800,9 +817,9 @@ int main(int argc, char const* argv[])
                 }
 
 
-                p_smplcam->call_forward(joints); //.hybrik(); // .skinning();
+                p_smplcam->call_forward(target29_tensor, joints,frameId); //.hybrik(); // .skinning();
 
-
+                
                 //////////////////////////////////////////////////////////////////////////
                 string time = Time2Str();
                 outfile << time.c_str() << ",";
@@ -961,6 +978,8 @@ int main(int argc, char const* argv[])
 
             }
 
+            
+
         }
         //std::this_thread::sleep_for(std::chrono::seconds(5));
         // show image
@@ -969,6 +988,7 @@ int main(int argc, char const* argv[])
         cv::waitKey(1);
         k4a_image_release(rgbImage);
         
+        frameId++;
     }
 
     return 0;
