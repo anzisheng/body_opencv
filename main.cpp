@@ -21,7 +21,13 @@
 
 #include "definition/def.h"
 #include "toolbox/Singleton.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include "torch/script.h"
+//#include "main.h"
+using namespace torch::indexing;
 using namespace std;
+using namespace cv;
 //#include <Device.h>
 #define SINGLE_SMPL smpl::Singleton<smpl::SMPL>
 
@@ -114,6 +120,355 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
     return convert.clone();
 
 }
+
+
+
+
+
+void write_json(ofstream& myfile, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes)
+{
+    /*
+    * quat = quat.to(torch::kCPU);
+    ofstream  myfile("data/000000.json");
+    //out_text.append('[\n')
+    myfile << "[\n";
+
+    double* ptr = (double*)quat.data_ptr();
+    for (size_t i = 0; i < 72; i++) {
+        try
+        {
+            //std::cout << *((ptr + i)) << std::endl;
+            myfile << *((ptr + i));
+            myfile << ", ";
+
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            throw;
+        }
+
+    }
+    myfile << "]\n";
+    myfile.close();
+
+    */
+    myfile << "{\n";
+    myfile << "\"id\":" << id << ",\n";
+    myfile << "\"Rh\": " << "[\n";
+    myfile << "[";
+    if (SHOWOUT)
+    {
+        std::cout << "Rh" << Rh << std::endl;
+        std::cout << "Th" << Th << std::endl;
+        std::cout << "Th" << poses << std::endl;
+        std::cout << "Th" << shapes << std::endl;
+
+    }
+    float* ptr = (float*)Rh.data_ptr();
+    for (size_t i = 0; i < 2; i++)
+    {
+        myfile << (float)*((ptr + i));
+        myfile << ", ";
+    }
+    myfile << *((ptr + 2));
+    myfile << "]\n],\n";
+
+    myfile << "\"Th\": " << "[\n";
+    myfile << "[";
+    ptr = (float*)Th.data_ptr();
+    for (size_t i = 0; i < 2; i++)
+    {
+        myfile << (float)*((ptr + i));
+        myfile << ", ";
+    }
+    myfile << (float)*((ptr + 2));
+    myfile << "]\n],\n";
+
+    myfile << "\"poses\": " << "[\n";
+    myfile << "[";
+    double* ptr2 = (double*)poses.data_ptr();
+    for (size_t i = 0; i < 71; i++)
+    {
+        myfile << *((ptr2 + i));
+        myfile << ", ";
+    }
+    myfile << *((ptr2 + 71));
+    myfile << "]\n],\n";
+
+    myfile << "\"shapes\": " << "[\n";
+    myfile << "[";
+    ptr = (float*)shapes.data_ptr();
+    for (size_t i = 0; i < 9; i++)
+    {
+        myfile << *((ptr + i));
+        myfile << ", ";
+    }
+    myfile << *((ptr + 9));
+    myfile << "]\n]\n";
+    myfile << "}\n";
+
+
+}
+
+
+void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
+{
+    file << "[\n";
+    int num = persons.size();
+    int index = 0;
+    for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
+    {
+        SMPL::person* p = *iter;
+        write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
+        if (index != num - 1)
+        {
+            file << ",";
+            index++;
+        }
+    }
+    file << "]";
+
+}
+
+
+std::tuple<torch::Tensor, torch::Tensor> umeyama(torch::Tensor src, torch::Tensor dst)
+{
+    // 		"""Estimate N-D similarity transformation with or without scaling.
+    // 			Parameters
+    // 			----------
+    // 			src : (M, N) array
+    // 			Source coordinates.
+    // 			dst : (M, N) array
+    // 			Destination coordinates.
+    // 			estimate_scale : bool
+    // 			Whether to estimate scaling factor.
+    // 			Returns
+    // 			------ -
+    // 			T : (N + 1, N + 1)
+    // 			The homogeneous similarity transformation matrix.The matrix contains
+    // 			NaN values only if the problem is not well - conditioned.
+
+    int num = src.size(0);// [0] ;
+    int dim = src.size(1);
+    // Compute mean of src and dst.
+    torch::Tensor src_mean = src.mean(0);
+    if (SHOWOUT)
+    {
+        std::cout << "src_mean" << src_mean << std::endl;
+    }
+    torch::Tensor dst_mean = dst.mean(0);
+    if (SHOWOUT)
+    {
+        std::cout << "src_mean" << dst_mean << std::endl;
+    }
+
+    //# Subtract mean from src and dst.
+    torch::Tensor 	src_demean = src - src_mean;
+    if (SHOWOUT)
+    {
+        std::cout << "src_demean " << src_demean << std::endl;
+    }
+    torch::Tensor 	dst_demean = dst - dst_mean;
+    if (SHOWOUT)
+    {
+        std::cout << "dst_demean  " << dst_demean << std::endl;
+    }
+
+
+    torch::Tensor 	A = torch::mm(torch::t(dst_demean), src_demean) / num;
+    if (SHOWOUT)
+    {
+        std::cout << "A" << A << std::endl;
+    }
+    torch::Tensor d = torch::ones({ dim });// , dtype = np.double)
+
+    //torch::linalg.det(A);
+    if (torch::linalg::det(A).item().toFloat() < 0)
+    {
+        d[dim - 1] = -1;
+    }
+    if (SHOWOUT)
+    {
+        std::cout << "d" << torch::linalg::det(A).item().toFloat() << "d " << d << std::endl;
+    }
+
+    torch::Tensor 	T = torch::eye(dim + 1);// , dtype = np.double)
+
+    if (SHOWOUT)
+    {
+        std::cout << "T" << T << std::endl;
+    }
+    std::tuple<at::Tensor, at::Tensor, at::Tensor> t;
+    t = torch::svd(A);
+
+    torch::Tensor U = std::get<0>(t);
+    torch::Tensor S = std::get<1>(t);
+    torch::Tensor V = std::get<2>(t);
+    V = V.t();
+    if (SHOWOUT)
+    {
+        std::cout << "U" << U << std::endl;
+        std::cout << "S" << S << std::endl;
+        std::cout << "V" << V << std::endl;
+    }
+
+
+    int rank = torch::linalg::matrix_rank(A, 0, true).item().toInt();//anzs
+
+    if (rank == dim - 1)
+    {
+        if ((torch::linalg::det(U) * torch::linalg::det(V)).item().toInt() > 0)
+        {
+            T.index({ Slice(None,dim), Slice(None,dim) }) = torch::dot(U, V);
+        }
+        else
+        {
+            torch::Tensor s = d[dim - 1];
+            d[dim - 1] = -1;
+            T.index({ Slice(None, dim), Slice(None, dim) }) = torch::dot(U, torch::dot(torch::diag(d), V));
+            d[dim - 1] = s;
+        }
+    }
+    else
+    {
+        T.index({ Slice(None,dim), Slice(None, dim) }) = torch::mm(U, torch::mm(torch::diag(d), V.transpose(0, 1)));
+        if (SHOWOUT)
+        {
+            std::cout << "T" << T << std::endl;
+        }
+
+    }
+
+    float scale = 1.0f;
+
+    /* Is there a way to insert a tensor into an existing tensor?
+    * https://discuss.pytorch.org/t/is-there-a-way-to-insert-a-tensor-into-an-existing-tensor/14642
+    * a = torch.rand(3, 4)
+    b = torch.zeros(1, 4)
+
+    idx = 1
+    c = torch.cat([a[:idx], b, a[idx:]], 0)
+    */
+
+    torch::Tensor homo_src;
+    //torch::Tensor homo_src = torch::cat(src, 3, 1, 1).T; //在第三列上插入1
+    torch::Tensor src_t = src.t();// index({ Slice(None,3) });
+    torch::Tensor last_one_row = torch::ones({ 1, src_t.size(1) });
+    homo_src = torch::cat({ src_t,last_one_row }, 0);
+    if (SHOWOUT)
+    {
+        std::cout << "src" << src << std::endl;
+        std::cout << "src_t" << src_t << std::endl;
+        std::cout << "last_one_row" << last_one_row << std::endl;
+        std::cout << "homo_src" << homo_src << std::endl;
+    }
+
+    torch::Tensor  rot = T.index({ Slice(None,dim),Slice(None,dim) });// [:dim, : dim] ;
+    if (SHOWOUT)
+    {
+        std::cout << "rot" << rot << std::endl;
+    }
+
+    std::vector< torch::Tensor> rots;// = [];
+    std::vector< float>	losses;// = []
+    for (int i = 0; i < 2; i++)
+    {
+        if (i == 1)
+        {
+            //rot.index({Slice(), Slice(None,2)})/*[:, : 2] */ *= -1;
+            rot.index({ Slice(), Slice(None,2) }) *= -1;
+            if (SHOWOUT)
+            {
+                std::cout << "rot" << rot << std::endl;
+            }
+        }
+        //transform = np.eye(dim + 1, dtype = np.double)
+        torch::Tensor transform = torch::eye(dim + 1);
+        transform.index({ Slice(None,dim),Slice(None,dim) }) = rot * scale;
+        if (SHOWOUT)
+        {
+            std::cout << "transform" << transform << std::endl;
+
+            std::cout << "src_mean.t()" << src_mean.t().reshape({ -1, 1 }) << std::endl;
+
+            torch::Tensor ttt = T.index({ Slice(None,dim), Slice(None,dim) });
+            std::cout << "ttt" << ttt << std::endl;
+
+        }
+
+
+        if (SHOWOUT)
+        {
+            torch::Tensor tttt = torch::mm(T.index({ Slice(None,dim), Slice(None,dim) }), src_mean.t().reshape({ -1, 1 }));
+            //torch::Tensor ttt = T.index({ Slice(None,dim), Slice(None,dim) });
+            std::cout << "ttt" << tttt << std::endl;
+        }
+
+        //transform[:dim,dim] = dst_mean - scale * np.dot(T[:dim, :dim], src_mean.T)
+        try
+        {
+            transform.index({ Slice(None, dim),dim }) = dst_mean - scale * torch::mm(T.index({ Slice(None,dim), Slice(None,dim) }), src_mean.t().reshape({ -1, 1 })).squeeze();
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            throw;
+        }
+        if (SHOWOUT)
+        {
+            std::cout << "transform" << transform << std::endl;
+        }
+
+
+        torch::Tensor transed = torch::mm(transform, homo_src).t().index({ Slice(), Slice(None, 3) });// [:, : 3]
+        float loss = torch::norm(transed - dst, 2).item().toFloat();
+        //losses.append(loss);
+        losses.push_back(loss);
+        //rots.append(rot.copy())
+        rots.push_back(rot.clone());
+
+    }
+
+    //# since only the smpl parameters is needed, we return rotation, translation and scale
+//# since only the smpl parameters is needed, we return rotation, translation and scale
+    torch::Tensor  trans;
+    try {
+        trans = dst_mean - scale * torch::mm(T.index({ Slice(None, dim),Slice(None,dim) }), src_mean.t().reshape({ -1, 1 })).squeeze();// [:dim, : dim] , src_mean.T)
+    }
+    catch (const std::exception& e)
+    {
+        std::cout << e.what() << std::endl;
+        throw;
+    }
+    if (losses[0] > losses[1])
+    {
+        rot = rots[1];
+    }
+    else
+    {
+        rot = rots[0];
+    }
+    if (SHOWOUT)
+    {
+        std::cout << "trans" << trans << std::endl;
+        std::cout << "rot" << rot << std::endl;
+    }
+
+
+    std::tuple<torch::Tensor, torch::Tensor> result = std::make_tuple(rot, trans);
+
+    //, trans, scale
+    return result;
+
+
+}
+
+
+
+
+
+
 
 std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
 {
@@ -586,7 +941,7 @@ int main(int argc, char const* argv[])
             // Successfully popped the body tracking result. Start your processing
             //检测人体数
             size_t num_bodies = k4abt_frame_get_num_bodies(body_frame); //取帧
-            std::vector<SMPL::person> g_persons;// (num_bodies);
+            std::vector<SMPL::person*> g_persons;// (num_bodies);
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             for (size_t i = 0; i < num_bodies; i++)
             { 
@@ -824,12 +1179,135 @@ int main(int argc, char const* argv[])
 
                 
                 smplcam* p_smplcam = new smplcam(device_cuda);
+                torch::Tensor pose;
                 p_smplcam->m_smpl = SINGLE_SMPL::get();
                
 
              
 
-                p_smplcam->call_forward(target29_tensor, g_joints ,frameId); //.hybrik(); // .skinning();
+                pose = p_smplcam->call_forward(target29_tensor, g_joints ,frameId); //.hybrik(); // .skinning();
+                if (SHOWOUT)
+                {
+                    std::cout << pose << std::endl;
+                }
+
+                //umeyama
+                torch::Tensor b = torch::tensor({ 16, 17, 1, 2, 12, 0 });
+                torch::Tensor joints = g_joints.index({ 0,{b} }).cpu();// [16] [17] .cpu();
+                if (SHOWOUT)
+                {
+                    std::cout << "joints;" << joints << std::endl;
+                }
+
+                torch::Tensor joints3d = target29_tensor.index({ 0,{b} }).cpu();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
+                if (SHOWOUT)
+                {
+                    std::cout << "joints3d;" << joints3d << std::endl;
+                }
+                std::tuple<torch::Tensor, torch::Tensor> rot_trans = umeyama(joints, joints3d);
+                //torch::Tensor rot_global;
+                //torch::Tensor trans_global;
+                
+
+                torch::Tensor rot_global = std::get<0>(rot_trans);
+                torch::Tensor trans_global = std::get<1>(rot_trans);
+                
+                if (SHOWOUT)
+                {
+                    std::cout << "trans_global" << trans_global << std::endl;
+                    std::cout << "rot_global" << rot_global << std::endl;
+                }
+
+                cv::Mat dst;
+                try
+                {
+                    rot_global = rot_global.reshape({ 9,1 });
+                    if (SHOWOUT)
+                    {
+                        std::cout << "rot_global" << rot_global << std::endl;
+                    }
+                    auto tttt0 = rot_global.index({ Slice(0,9) }).to(torch::kFloat);// .item();
+                    auto x0 = tttt0.index({ 0 }).item().toFloat();
+                    auto x1 = tttt0.index({ 1 }).item().toFloat();
+                    auto x2 = tttt0.index({ 2 }).item().toFloat();
+
+                    auto x3 = tttt0.index({ 3 }).item().toFloat();
+                    auto x4 = tttt0.index({ 4 }).item().toFloat();
+                    auto x5 = tttt0.index({ 5 }).item().toFloat();
+
+                    auto x6 = tttt0.index({ 6 }).item().toFloat();
+                    auto x7 = tttt0.index({ 7 }).item().toFloat();
+                    auto x8 = tttt0.index({ 8 }).item().toFloat();
+
+
+                    cv::Mat src = (Mat_<float>(3, 3) << x0, x1, x2, x3, x4, x5, x6, x7, x8);
+                    //src(0, 0) = 0;
+
+                    cv::Rodrigues(src, dst);
+                    if (SHOWOUT)
+                    {
+                        //std::cout << "tttt" << tttt0 << std::endl;
+                        if (SHOWOUT)
+                        {
+                            std::cout << "dst_rot" << dst << std::endl;
+                            //std::cout << "dst_rot" << dst(0).dims << std::endl;
+                            //std::cout << "dst_rot" << dst(1).dims << std::endl;
+                        }
+                    }
+
+
+                }
+                catch (const exception& e)
+                {
+                    std::cout << e.what() << std::endl;
+                    throw;
+                }
+
+                dst = dst.reshape(1, 3);
+                torch::Tensor rot = torch::from_blob(dst.data, { 1, 3 }, torch::kFloat);
+                if (SHOWOUT)
+                {
+                    std::cout << "rot" << rot << std::endl;
+                }
+
+
+
+
+
+                //int id = i;
+                torch::Tensor Rh = rot;// torch::tensor({ 1.0f, 1.0f, 1.0f });
+                torch::Tensor Th = trans_global;// torch::tensor({ 0.3, 0.3, 0.3 });
+                torch::Tensor shapes = torch::zeros({ 10 });
+                pose = pose.to(torch::kCPU);
+                SMPL::person* p = new SMPL::person(i, Rh, Th, pose, shapes);
+                g_persons.push_back(p);
+
+                //id = 1;
+                //Rh = torch::tensor({ 0.5f, 0.5f, 0.7f });
+                //Th = torch::tensor({ 0.8, 0.9, 0.2 });
+                //shapes = torch::zeros({ 10 });
+                //pose = pose.to(torch::kCPU);
+                //SMPL::person* p2 = new SMPL::person(id, Rh, Th, quat, shapes);
+                //g_persons.push_back(p2);
+
+
+                char ss[7];
+                sprintf(ss, "%06d", frameId);
+                //return ss;
+
+                string file = string("x64\\debug\\data\\") + string(ss) + ".json";
+
+
+                ofstream myfile2(file);
+                write_persons(g_persons, myfile2);
+                myfile2.close();
+
+
+
+
+
+                //generate a person
+                //SMPL::person* p = new SMPL::person();
 
                 
                 //////////////////////////////////////////////////////////////////////////

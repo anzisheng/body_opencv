@@ -916,7 +916,7 @@ void SMPL::getSkeleton(int64_t index,
     return;
 }
 
-void SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas, const torch::Tensor& restJoints_24,int frameId)
+torch::Tensor SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas, const torch::Tensor& restJoints_24,int frameId)
 {
     batch_size = pose_skeleton.size(0);
 
@@ -953,7 +953,7 @@ void SMPL::hybrik(const torch::Tensor& pose_skeleton, const torch::Tensor& betas
 
         std::cout << "pose_skeleton:" << pose_skeleton << std::endl;
     }
-    m__skinner.hybrik(pose_skeleton,
+    return m__skinner.hybrik(pose_skeleton,
         betas, 
         m__templateRestShape, 
         m__shapeBlendBasis, //// (6890, 3, 10)

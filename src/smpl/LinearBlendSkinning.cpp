@@ -1787,91 +1787,91 @@ namespace smpl
 
 
     
-    void LinearBlendSkinning::write_json(ofstream &myfile, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes)
-    {
-        /*
-		* quat = quat.to(torch::kCPU);
-		ofstream  myfile("data/000000.json");
-		//out_text.append('[\n')
-		myfile << "[\n";
+  //  void LinearBlendSkinning::write_json(ofstream &myfile, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes)
+  //  {
+  //      /*
+		//* quat = quat.to(torch::kCPU);
+		//ofstream  myfile("data/000000.json");
+		////out_text.append('[\n')
+		//myfile << "[\n";
 
-		double* ptr = (double*)quat.data_ptr();
-		for (size_t i = 0; i < 72; i++) {
-			try
-			{
-				//std::cout << *((ptr + i)) << std::endl;
-				myfile << *((ptr + i));
-				myfile << ", ";
+		//double* ptr = (double*)quat.data_ptr();
+		//for (size_t i = 0; i < 72; i++) {
+		//	try
+		//	{
+		//		//std::cout << *((ptr + i)) << std::endl;
+		//		myfile << *((ptr + i));
+		//		myfile << ", ";
 
-			}
-			catch (const std::exception& e)
-			{
-				std::cout << e.what() << std::endl;
-				throw;
-			}
+		//	}
+		//	catch (const std::exception& e)
+		//	{
+		//		std::cout << e.what() << std::endl;
+		//		throw;
+		//	}
 
-		}
-		myfile << "]\n";
-		myfile.close();
+		//}
+		//myfile << "]\n";
+		//myfile.close();
 
-        */
-        myfile << "{\n";
-        myfile << "\"id\":" << id << ",\n";
-        myfile << "\"Rh\": " << "[\n";
-        myfile << "[";
-        if (SHOWOUT)
-        {
-            std::cout << "Rh" << Rh << std::endl;
-            std::cout << "Th" << Th << std::endl;
-            std::cout << "Th" << poses << std::endl;
-            std::cout << "Th" << shapes << std::endl;
-            
-        }
-        float* ptr = (float*)Rh.data_ptr();
-        for (size_t i = 0; i < 2; i++)
-        {
-			myfile << (float)*((ptr + i));
-			myfile << ", ";
-        }
-        myfile << *((ptr + 2));
-        myfile << "]\n],\n";
+  //      */
+  //      myfile << "{\n";
+  //      myfile << "\"id\":" << id << ",\n";
+  //      myfile << "\"Rh\": " << "[\n";
+  //      myfile << "[";
+  //      if (SHOWOUT)
+  //      {
+  //          std::cout << "Rh" << Rh << std::endl;
+  //          std::cout << "Th" << Th << std::endl;
+  //          std::cout << "Th" << poses << std::endl;
+  //          std::cout << "Th" << shapes << std::endl;
+  //          
+  //      }
+  //      float* ptr = (float*)Rh.data_ptr();
+  //      for (size_t i = 0; i < 2; i++)
+  //      {
+		//	myfile << (float)*((ptr + i));
+		//	myfile << ", ";
+  //      }
+  //      myfile << *((ptr + 2));
+  //      myfile << "]\n],\n";
 
-        myfile << "\"Th\": " << "[\n";
-        myfile << "[";
-		ptr = (float*)Th.data_ptr();
-		for (size_t i = 0; i < 2; i++)
-		{
-			myfile << (float)*((ptr + i));
-			myfile << ", ";
-		}
-		myfile << (float)*((ptr + 2));
-		myfile << "]\n],\n";
+  //      myfile << "\"Th\": " << "[\n";
+  //      myfile << "[";
+		//ptr = (float*)Th.data_ptr();
+		//for (size_t i = 0; i < 2; i++)
+		//{
+		//	myfile << (float)*((ptr + i));
+		//	myfile << ", ";
+		//}
+		//myfile << (float)*((ptr + 2));
+		//myfile << "]\n],\n";
 
-        myfile << "\"poses\": " << "[\n";
-        myfile << "[";
-        double* ptr2 = (double*)poses.data_ptr();
-        for (size_t i = 0; i < 71; i++)
-        {
-            myfile << *((ptr2 + i));
-            myfile << ", ";
-        }
-        myfile << *((ptr2 + 71));
-        myfile << "]\n],\n";
+  //      myfile << "\"poses\": " << "[\n";
+  //      myfile << "[";
+  //      double* ptr2 = (double*)poses.data_ptr();
+  //      for (size_t i = 0; i < 71; i++)
+  //      {
+  //          myfile << *((ptr2 + i));
+  //          myfile << ", ";
+  //      }
+  //      myfile << *((ptr2 + 71));
+  //      myfile << "]\n],\n";
 
-		myfile << "\"shapes\": " << "[\n";
-		myfile << "[";
-		ptr = (float*)shapes.data_ptr();
-		for (size_t i = 0; i < 9; i++)
-		{
-			myfile << *((ptr + i));
-			myfile << ", ";
-		}
-		myfile << *((ptr + 9));
-		myfile << "]\n]\n";
-        myfile << "}\n";            
+		//myfile << "\"shapes\": " << "[\n";
+		//myfile << "[";
+		//ptr = (float*)shapes.data_ptr();
+		//for (size_t i = 0; i < 9; i++)
+		//{
+		//	myfile << *((ptr + i));
+		//	myfile << ", ";
+		//}
+		//myfile << *((ptr + 9));
+		//myfile << "]\n]\n";
+  //      myfile << "}\n";            
 
 
-    }
+  //  }
 
 
 /*
@@ -2192,7 +2192,7 @@ namespace smpl
 
     using ms = std::chrono::milliseconds;
     using clk = std::chrono::system_clock;
-    void LinearBlendSkinning::hybrik(
+    torch::Tensor LinearBlendSkinning::hybrik(
         const torch::Tensor& pose_skeleton,
         const torch::Tensor& betas,
         //const torch::Tensor& global_orient, 
@@ -2326,24 +2326,29 @@ namespace smpl
         quat.index({ Slice(0,3) }) = 0;// # 调整初始位置
         quat.index({ Slice(21,27) }) = 0;
         quat.index({ Slice(69,72) }) = 0;
+
+        return quat; //先结束，umeyama去外面。
+
         if (SHOWOUT)
         {
             std::cout << "quat3" << quat << std::endl;
 
         }
-        auto end0 = clk::now();
-		auto duration = std::chrono::duration_cast<ms>(end0 - begin0);
-        std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
+  //      auto end0 = clk::now();
+  //      auto duration = std::chrono::duration_cast<ms>(end0 - begin0);
+  //      std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
 
         std::vector<SMPL::person*>  g_persons;
 
         //joints = (kpts_v[0, [16, 17, 1, 2, 12, 0]]).cpu() //#12: neck, 0 : pelvis
 
-        torch::Tensor joint0 = restJoints_24.index({ 0 });
-		if (SHOWOUT)
-		{
-			std::cout << "joint0 ;" << joint0 << std::endl;
-		}
+  //      torch::Tensor joint0 = restJoints_24.index({ 0 });
+		//if (SHOWOUT)
+		//{
+		//	std::cout << "joint0 ;" << joint0 << std::endl;
+		//}
+
+/*
         torch::Tensor b = torch::tensor({ 16, 17, 1, 2, 12, 0 });
         torch::Tensor joints = restJoints_24.index({ 0,{b} }).cpu();// [16] [17] .cpu();
         if (SHOWOUT)
@@ -2418,16 +2423,7 @@ namespace smpl
 		}
 
 
-//		auto x = trans_global.index({ 0 }).to(torch::kFloat).item();
-		//float xx = x.toFloat();
-        
 
-        //torch::Tensor rot_last = cv2.Rodrigues(rot_global)[0].reshape(1, 3)
-
-
-
-// 		joints3d = torch.squeeze(joints3d)
-// 			joints3d = np.array(joints3d)
 
 		
         int id = 0;
@@ -2439,9 +2435,9 @@ namespace smpl
         g_persons.push_back(p);
 
 		 id = 1;
-		/*torch::Tensor*/ Rh = torch::tensor({ 0.5f, 0.5f, 0.7f });
-		/*torch::Tensor*/ Th = torch::tensor({ 0.8, 0.9, 0.2 });
-		/*torch::Tensor*/ shapes = torch::zeros({ 10 });
+		Rh = torch::tensor({ 0.5f, 0.5f, 0.7f });
+		Th = torch::tensor({ 0.8, 0.9, 0.2 });
+		shapes = torch::zeros({ 10 });
 		quat = quat.to(torch::kCPU);
         SMPL::person* p2 = new SMPL::person(id, Rh, Th, quat, shapes);
 		//g_persons.push_back(p2);
@@ -2458,33 +2454,7 @@ namespace smpl
         write_persons(g_persons, myfile2);
         myfile2.close();
 
-        //save to json file
-		  // print tensor 打印前20 个
-		//torch::Tensor grad_bottom_tensor
-//         quat = quat.to(torch::kCPU);
-//         ofstream  myfile("data/000000.json");
-//         //out_text.append('[\n')
-//         myfile << "[\n";
-// 
-//         double* ptr = (double*)quat.data_ptr();
-// 		for (size_t i = 0; i < 72; i++) {
-//             try
-//             {
-//                 //std::cout << *((ptr + i)) << std::endl;
-//                 myfile << *((ptr + i));
-//                 myfile << ", ";
-// 
-//             }
-//             catch (const std::exception& e)
-//             {
-//                 std::cout << e.what() << std::endl;
-//                 throw;
-//             }
-// 			
-// 		}
-//         myfile << "]\n";
-//         myfile.close();
-
+        */
     }
 
 
@@ -2550,24 +2520,24 @@ namespace smpl
 
     }
     
-    void LinearBlendSkinning::write_persons(std::vector<SMPL::person*> persons, ofstream& file)
-    {
-        file << "[\n";
-        int num = persons.size();
-        int index = 0;
-        for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
-        {
-            SMPL::person *p = *iter;
-            write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
-            if (index != num -1)
-            {
-                file << ",";
-                index++;
-            }
-        }
-        file << "]";
+    //void LinearBlendSkinning::write_persons(std::vector<SMPL::person*> persons, ofstream& file)
+    //{
+    //    file << "[\n";
+    //    int num = persons.size();
+    //    int index = 0;
+    //    for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
+    //    {
+    //        SMPL::person *p = *iter;
+    //        write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
+    //        if (index != num -1)
+    //        {
+    //            file << ",";
+    //            index++;
+    //        }
+    //    }
+    //    file << "]";
 
-    }
+    //}
 
    
 

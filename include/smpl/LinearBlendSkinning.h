@@ -285,10 +285,10 @@ public: // PUBLIC METHODS
 // 		return torch.einsum('bik,ji->bjk', [vertices, J_regressor])
 
 
-	void write_persons(std::vector<SMPL::person*> persons, std::ofstream& file);
-	void write_json(std::ofstream& file, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes);
+	//void write_persons(std::vector<SMPL::person*> persons, std::ofstream& file);
+	//void write_json(std::ofstream& file, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes);
 
-	void hybrik(const torch::Tensor& torpose_skeleton,
+	torch::Tensor hybrik(const torch::Tensor& torpose_skeleton,
 		const torch::Tensor& betas,
 		//const torch::Tensor& global_orient,
 		//phis,

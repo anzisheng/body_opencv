@@ -269,7 +269,7 @@ public: // PUBLIC METHODS
     ) noexcept(false);
     //////////////////////////////////////
     //anzs add 
-    void hybrik(const torch::Tensor& pose_skeleton,
+    torch::Tensor hybrik(const torch::Tensor& pose_skeleton,
          const torch::Tensor& betas,
         const torch::Tensor& restJoints_24,
         int frameId
