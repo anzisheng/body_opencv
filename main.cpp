@@ -503,7 +503,7 @@ int main(int argc, char const* argv[])
 
     int frameId = 0;
 
-    while(frameId < 200)
+    while(frameId < 100)
     {
         k4a_capture_t sensor_capture;
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -543,9 +543,11 @@ int main(int argc, char const* argv[])
         {
             // Successfully popped the body tracking result. Start your processing
             //检测人体数
-            size_t num_bodies = k4abt_frame_get_num_bodies(body_frame);
+            size_t num_bodies = k4abt_frame_get_num_bodies(body_frame); //取帧
+            std::vector<SMPL::person> g_persons;// (num_bodies);
+            //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             for (size_t i = 0; i < num_bodies; i++)
-            {
+            { 
                 //获取人体框架
                 k4abt_skeleton_t skeleton;
                 k4abt_frame_get_body_skeleton(body_frame, i, &skeleton);
@@ -772,7 +774,6 @@ int main(int argc, char const* argv[])
                 if (SHOWOUT)
                 {
                     std::cout << "target29 " << target29_tensor << std::endl;
-
                 }
                 
 

@@ -41,6 +41,7 @@ using namespace torch::indexing;
 #include "cnpy.h"
 
 #include <opencv2/opencv.hpp>
+#include "smpl/person.h"
 using namespace std;
 using namespace cv;
 //----------
@@ -2334,7 +2335,7 @@ namespace smpl
 		auto duration = std::chrono::duration_cast<ms>(end0 - begin0);
         std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
 
-        std::vector<person*>  g_persons;
+        std::vector<SMPL::person*>  g_persons;
 
         //joints = (kpts_v[0, [16, 17, 1, 2, 12, 0]]).cpu() //#12: neck, 0 : pelvis
 
@@ -2434,7 +2435,7 @@ namespace smpl
         torch::Tensor Th = trans_global;// torch::tensor({ 0.3, 0.3, 0.3 });
         torch::Tensor shapes = torch::zeros({10});
         quat = quat.to(torch::kCPU);
-        person* p = new person(id, Rh, Th,quat,shapes);
+        SMPL::person* p = new SMPL::person(id, Rh, Th,quat,shapes);
         g_persons.push_back(p);
 
 		 id = 1;
@@ -2442,7 +2443,7 @@ namespace smpl
 		/*torch::Tensor*/ Th = torch::tensor({ 0.8, 0.9, 0.2 });
 		/*torch::Tensor*/ shapes = torch::zeros({ 10 });
 		quat = quat.to(torch::kCPU);
-		person* p2 = new person(id, Rh, Th, quat, shapes);
+        SMPL::person* p2 = new SMPL::person(id, Rh, Th, quat, shapes);
 		//g_persons.push_back(p2);
 
 
@@ -2549,14 +2550,14 @@ namespace smpl
 
     }
     
-    void LinearBlendSkinning::write_persons(std::vector<person*> persons, ofstream& file)
+    void LinearBlendSkinning::write_persons(std::vector<SMPL::person*> persons, ofstream& file)
     {
         file << "[\n";
         int num = persons.size();
         int index = 0;
-        for (std::vector<person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
+        for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
         {
-            person *p = *iter;
+            SMPL::person *p = *iter;
             write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
             if (index != num -1)
             {
@@ -2568,11 +2569,7 @@ namespace smpl
 
     }
 
-    person::person(int id, torch::Tensor Rh, torch::Tensor Th, torch::Tensor poses, torch::Tensor shapes) :
-        m_id(id), m_Rh(Rh), m_Th(Th), m_poses(poses), m_shapes(shapes)
-    {
-
-    }
+   
 
     
 
