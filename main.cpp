@@ -501,6 +501,45 @@ int main(int argc, char const* argv[])
         return -1;
     }
 
+
+    torch::DeviceType device_type;
+
+    if (torch::cuda::is_available())
+    {
+        device_type = torch::kCPU;// torch::kCUDA;
+    }
+    else
+    {
+        device_type = torch::kCPU;
+    }
+    torch::Device device_cuda(device_type, 0);
+    device_cuda.set_index(0);
+
+    std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+    SINGLE_SMPL::get()->setDevice(device_cuda);
+    SINGLE_SMPL::get()->setModelPath(modelPath);
+    SINGLE_SMPL::get()->init();
+
+    torch::Tensor vertices;
+    torch::Tensor beta0;
+    torch::Tensor theta0;
+
+    beta0 = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device_cuda);
+
+    float pose_rand_amplitude0 = 0.0;
+    theta0 = pose_rand_amplitude0 * torch::rand({ BATCH_SIZE, JOINT_NUM, 3 }) - pose_rand_amplitude0 / 2 * torch::ones({ BATCH_SIZE, JOINT_NUM, 3 });
+
+    SINGLE_SMPL::get()->launch(beta0, theta0);
+    torch::Tensor g_joints = SINGLE_SMPL::get()->getRestJoint();
+    //std::cout << "joints " << joints << std::endl;
+    if (SHOWOUT)
+    {
+        std::cout << "g_joints" << g_joints << std::endl;
+
+    }
+
+
+
     int frameId = 0;
 
     while(frameId < 100)
@@ -536,6 +575,9 @@ int main(int argc, char const* argv[])
         }
 
         writer.write(cv_rgbImage_no_alpha);
+
+
+
         //µ¯³ö½á¹û
         k4abt_frame_t body_frame = NULL;
         k4a_wait_result_t pop_frame_result = k4abt_tracker_pop_result(tracker, &body_frame, K4A_WAIT_INFINITE);
@@ -779,46 +821,15 @@ int main(int argc, char const* argv[])
 
                 //////////////////////////////////////////////////////////////////////////
 
-				torch::DeviceType device_type;
 
-				if (torch::cuda::is_available())
-				{
-                    device_type = torch::kCPU;// torch::kCUDA;
-				}
-				else
-				{
-					device_type = torch::kCPU;
-				}
-				torch::Device device_cuda(device_type, 0);
-				device_cuda.set_index(0);
-
-                std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+                
                 smplcam* p_smplcam = new smplcam(device_cuda);
                 p_smplcam->m_smpl = SINGLE_SMPL::get();
-                SINGLE_SMPL::get()->setDevice(device_cuda);
-                SINGLE_SMPL::get()->setModelPath(modelPath);
-                SINGLE_SMPL::get()->init();
+               
 
-                torch::Tensor vertices;
-                torch::Tensor beta0;
-                torch::Tensor theta0;
+             
 
-                beta0 = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device_cuda);
-
-                float pose_rand_amplitude0 = 0.0;
-                theta0 = pose_rand_amplitude0 * torch::rand({ BATCH_SIZE, JOINT_NUM, 3 }) - pose_rand_amplitude0 / 2 * torch::ones({ BATCH_SIZE, JOINT_NUM, 3 });
-
-                SINGLE_SMPL::get()->launch(beta0, theta0);
-                torch::Tensor joints = SINGLE_SMPL::get()->getRestJoint();
-                //std::cout << "joints " << joints << std::endl;
-                if (SHOWOUT)
-                {
-                    std::cout << "joint2d " << joints << std::endl;                  
-
-                }
-
-
-                p_smplcam->call_forward(target29_tensor, joints,frameId); //.hybrik(); // .skinning();
+                p_smplcam->call_forward(target29_tensor, g_joints ,frameId); //.hybrik(); // .skinning();
 
                 
                 //////////////////////////////////////////////////////////////////////////
