@@ -271,7 +271,7 @@ public: // PUBLIC METHODS
     //anzs add 
     torch::Tensor hybrik(const torch::Tensor& pose_skeleton,
          const torch::Tensor& betas,
-        const torch::Tensor& restJoints_24,
+        //const torch::Tensor& restJoints_24,
         int frameId
 //          const torch::Tensor& v_template,
 //          const torch::Tensor& shapedirs,

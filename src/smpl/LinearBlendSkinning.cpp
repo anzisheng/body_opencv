@@ -2205,7 +2205,7 @@ namespace smpl
         const torch::Tensor& parents,
         const torch::Tensor& children,
         const torch::Tensor& lbs_weights,
-        const torch::Tensor& restJoints_24,
+        //const torch::Tensor& restJoints_24,
         int frameId
         )
     {

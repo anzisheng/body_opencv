@@ -161,50 +161,50 @@ void write_json(ofstream& myfile, const int id, const torch::Tensor& Rh, const t
     {
         std::cout << "Rh" << Rh << std::endl;
         std::cout << "Th" << Th << std::endl;
-        std::cout << "Th" << poses << std::endl;
-        std::cout << "Th" << shapes << std::endl;
+        std::cout << "poses" << poses << std::endl;
+        std::cout << "shapes" << shapes << std::endl;
 
     }
-    float* ptr = (float*)Rh.data_ptr();
+    float* ptr_Rh = (float*)Rh.data_ptr();
     for (size_t i = 0; i < 2; i++)
     {
-        myfile << (float)*((ptr + i));
+        myfile << (float)*((ptr_Rh + i));
         myfile << ", ";
     }
-    myfile << *((ptr + 2));
+    myfile << *((ptr_Rh + 2));
     myfile << "]\n],\n";
 
     myfile << "\"Th\": " << "[\n";
     myfile << "[";
-    ptr = (float*)Th.data_ptr();
+    float* ptr_Th = (float*)Th.data_ptr();
     for (size_t i = 0; i < 2; i++)
     {
-        myfile << (float)*((ptr + i));
+        myfile << (float)*((ptr_Th + i));
         myfile << ", ";
     }
-    myfile << (float)*((ptr + 2));
+    myfile << (float)*((ptr_Th + 2));
     myfile << "]\n],\n";
 
     myfile << "\"poses\": " << "[\n";
     myfile << "[";
-    double* ptr2 = (double*)poses.data_ptr();
+    double* ptr_poses = (double*)poses.data_ptr();
     for (size_t i = 0; i < 71; i++)
     {
-        myfile << *((ptr2 + i));
+        myfile << *((ptr_poses + i));
         myfile << ", ";
     }
-    myfile << *((ptr2 + 71));
+    myfile << *((ptr_poses + 71));
     myfile << "]\n],\n";
 
     myfile << "\"shapes\": " << "[\n";
     myfile << "[";
-    ptr = (float*)shapes.data_ptr();
+    float* shapes_ptr = (float*)shapes.data_ptr();
     for (size_t i = 0; i < 9; i++)
     {
-        myfile << *((ptr + i));
+        myfile << *((shapes_ptr + i));
         myfile << ", ";
     }
-    myfile << *((ptr + 9));
+    myfile << *((shapes_ptr + 9));
     myfile << "]\n]\n";
     myfile << "}\n";
 
@@ -892,12 +892,12 @@ int main(int argc, char const* argv[])
         std::cout << "g_joints" << g_joints << std::endl;
 
     }
-
+    //torch::Tensor one_test = g_joints.clone();
 
 
     int frameId = 0;
 
-    while(frameId < 100)
+    while(frameId < 10)
     {
         k4a_capture_t sensor_capture;
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -932,7 +932,7 @@ int main(int argc, char const* argv[])
         writer.write(cv_rgbImage_no_alpha);
 
 
-
+        std::vector<SMPL::person*> g_persons;// (num_bodies);
         //弹出结果
         k4abt_frame_t body_frame = NULL;
         k4a_wait_result_t pop_frame_result = k4abt_tracker_pop_result(tracker, &body_frame, K4A_WAIT_INFINITE);
@@ -941,7 +941,7 @@ int main(int argc, char const* argv[])
             // Successfully popped the body tracking result. Start your processing
             //检测人体数
             size_t num_bodies = k4abt_frame_get_num_bodies(body_frame); //取帧
-            std::vector<SMPL::person*> g_persons;// (num_bodies);
+            
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             for (size_t i = 0; i < num_bodies; i++)
             { 
@@ -1182,10 +1182,12 @@ int main(int argc, char const* argv[])
                 torch::Tensor pose;
                 p_smplcam->m_smpl = SINGLE_SMPL::get();
                
+                //SINGLE_SMPL::destroy();
+
 
              
 
-                pose = p_smplcam->call_forward(target29_tensor, g_joints ,frameId); //.hybrik(); // .skinning();
+                pose = p_smplcam->call_forward(target29_tensor,/* g_joints ,*/frameId); //.hybrik(); // .skinning();
                 if (SHOWOUT)
                 {
                     std::cout << pose << std::endl;
@@ -1218,7 +1220,7 @@ int main(int argc, char const* argv[])
                     std::cout << "rot_global" << rot_global << std::endl;
                 }
 
-                cv::Mat dst;
+                cv::Mat dst = (Mat_<float>(3, 3) << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);//anzs //cv::Mat::zeros(height, width, CV_32F);
                 try
                 {
                     rot_global = rot_global.reshape({ 9,1 });
@@ -1291,16 +1293,16 @@ int main(int argc, char const* argv[])
                 //g_persons.push_back(p2);
 
 
-                char ss[7];
-                sprintf(ss, "%06d", frameId);
-                //return ss;
+                //char ss[7];
+                //sprintf(ss, "%06d", frameId);
+                ////return ss;
 
-                string file = string("x64\\debug\\data\\") + string(ss) + ".json";
+                //string file = string("x64\\debug\\data\\") + string(ss) + ".json";
 
 
-                ofstream myfile2(file);
-                write_persons(g_persons, myfile2);
-                myfile2.close();
+                //ofstream myfile2(file);
+                //write_persons(g_persons, myfile2);
+                //myfile2.close();
 
 
 
@@ -1465,10 +1467,7 @@ int main(int argc, char const* argv[])
 
                 //按smpl 格式 保存關節點，並計算pose
 
-
-            }
-
-            
+            }            
 
         }
         //std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -1478,8 +1477,28 @@ int main(int argc, char const* argv[])
         cv::waitKey(1);
         k4a_image_release(rgbImage);
         
-        frameId++;
-    }
 
+        char ss[7];
+        sprintf(ss, "%06d", frameId);
+        //return ss;
+
+        string file = string("x64\\debug\\data\\") + string(ss) + ".json";
+
+
+        ofstream myfile2(file);
+        write_persons(g_persons, myfile2);
+        myfile2.close();
+
+
+
+
+
+
+
+        frameId++;
+
+
+    }   
+    writer.release();
     return 0;
 }

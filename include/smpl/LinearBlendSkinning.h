@@ -300,7 +300,7 @@ public: // PUBLIC METHODS
 		const torch::Tensor& parents,
 		const torch::Tensor& children,
 		const torch::Tensor& lbs_weights,
-		const torch::Tensor& restJoints_24,
+		//const torch::Tensor& restJoints_24,
 		int frameId);// dtype = torch.float32, train = False, leaf_thetas = None)
 
 
