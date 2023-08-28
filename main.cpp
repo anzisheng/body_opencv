@@ -126,7 +126,7 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
 
 
 
-void write_json(ofstream& myfile, const int id, const torch::Tensor& Rh, const torch::Tensor& Th, const torch::Tensor& poses, const torch::Tensor& shapes)
+void write_json(ofstream& myfile, const int id, const torch::Tensor Rh, const torch::Tensor Th, const torch::Tensor poses, const torch::Tensor shapes)
 {
     /*
     * quat = quat.to(torch::kCPU);
@@ -221,7 +221,7 @@ void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
     for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
     {
         SMPL::person* p = *iter;
-        write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
+        write_json(file, p->m_id, p->m_Rh.clone(), p->m_Th.clone(), p->m_poses.clone(), p->m_shapes.clone());
         if (index != num - 1)
         {
             file << ",";
@@ -863,10 +863,11 @@ int main(int argc, char const* argv[])
 
 
     int frameId = 0;
+    k4a_capture_t sensor_capture;
 
     while(frameId < 10)
     {
-        k4a_capture_t sensor_capture;
+        
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
         k4a_wait_result_t queue_capture_result = k4abt_tracker_enqueue_capture(tracker, sensor_capture, K4A_WAIT_INFINITE);
 
@@ -1232,18 +1233,19 @@ int main(int argc, char const* argv[])
                 
 
                 torch::Tensor rot_global = std::get<0>(rot_trans);
+                rot_global = rot_global.clone();// std::get<0>(rot_trans);
                 torch::Tensor trans_global = std::get<1>(rot_trans);
-                
+                trans_global = trans_global.clone();
                 if (SHOWOUT)
                 {
                     std::cout << "trans_global" << trans_global << std::endl;
                     std::cout << "rot_global" << rot_global << std::endl;
                 }
 
-                cv::Mat dst = (Mat_<float>(3, 3) << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);//anzs //cv::Mat::zeros(height, width, CV_32F);
+                cv::Mat dst = (Mat_<float>(3, 1) << 0.0f, 0.0f, 0.0f );//anzs //cv::Mat::zeros(height, width, CV_32F);
                 try
                 {
-                    rot_global = rot_global.clone().reshape({9,1}).clone();
+                    rot_global = rot_global.reshape({ 9,1 }).clone();
                     if (SHOWOUT)
                     {
                         std::cout << "rot_global" << rot_global << std::endl;
@@ -1284,14 +1286,14 @@ int main(int argc, char const* argv[])
                     std::cout << e.what() << std::endl;
                     throw;
                 }                
-                dst = dst.clone().reshape(1, 3).clone();
+                dst = dst.reshape(1, 3).clone();
                 torch::Tensor rot = torch::from_blob(dst.data, { 1, 3 }, torch::kFloat);
                 if (SHOWOUT)
                 {
                     std::cout << "rot" << rot << std::endl;
                 }
 
-
+                rot = rot.clone();
 
 
 
@@ -1509,13 +1511,7 @@ int main(int argc, char const* argv[])
         myfile2.close();
 
 
-
-
-
-
-
         frameId++;
-
 
     }   
     writer.release();
