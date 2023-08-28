@@ -29,7 +29,8 @@ using namespace torch::indexing;
 using namespace std;
 using namespace cv;
 //#include <Device.h>
-#define SINGLE_SMPL smpl::Singleton<smpl::SMPL>
+//#define SINGLE_SMPL smpl::Singleton<smpl::SMPL>
+//smpl::SMPL* g_smpl = new smpl::SMPL;
 
 //#include "main.h"
 
@@ -788,6 +789,7 @@ int main(int argc, char const* argv[])
 // 	cuda.set_index(0);
 
 
+    
 
     k4a_device_t device = NULL;
     VERIFY(k4a_device_open(0, &device), "Open K4A Device failed!");
@@ -857,41 +859,6 @@ int main(int argc, char const* argv[])
     }
 
 
-    torch::DeviceType device_type;
-
-    if (torch::cuda::is_available())
-    {
-        device_type = torch::kCPU;// torch::kCUDA;
-    }
-    else
-    {
-        device_type = torch::kCPU;
-    }
-    torch::Device device_cuda(device_type, 0);
-    device_cuda.set_index(0);
-
-    std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
-    SINGLE_SMPL::get()->setDevice(device_cuda);
-    SINGLE_SMPL::get()->setModelPath(modelPath);
-    SINGLE_SMPL::get()->init();
-
-    torch::Tensor vertices;
-    torch::Tensor beta0;
-    torch::Tensor theta0;
-
-    beta0 = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device_cuda);
-
-    float pose_rand_amplitude0 = 0.0;
-    theta0 = pose_rand_amplitude0 * torch::rand({ BATCH_SIZE, JOINT_NUM, 3 }) - pose_rand_amplitude0 / 2 * torch::ones({ BATCH_SIZE, JOINT_NUM, 3 });
-
-    SINGLE_SMPL::get()->launch(beta0, theta0);
-    torch::Tensor g_joints = SINGLE_SMPL::get()->getRestJoint();
-    //std::cout << "joints " << joints << std::endl;
-    if (SHOWOUT)
-    {
-        std::cout << "g_joints" << g_joints << std::endl;
-
-    }
     //torch::Tensor one_test = g_joints.clone();
 
 
@@ -941,10 +908,62 @@ int main(int argc, char const* argv[])
             // Successfully popped the body tracking result. Start your processing
             //检测人体数
             size_t num_bodies = k4abt_frame_get_num_bodies(body_frame); //取帧
-            
+            if (num_bodies > 1)
+            {
+                int p = 2;
+            }            
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             for (size_t i = 0; i < num_bodies; i++)
             { 
+
+                smpl::SMPL* g_smpl = new smpl::SMPL;
+
+                torch::DeviceType device_type;
+
+                if (torch::cuda::is_available())
+                {
+                    device_type = torch::kCPU;// torch::kCUDA;
+                }
+                else
+                {
+                    device_type = torch::kCPU;
+                }
+                torch::Device device_cuda(device_type, 0);
+                device_cuda.set_index(0);
+
+                std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+                //SINGLE_SMPL::get()->setDevice(device_cuda);
+                g_smpl->setDevice(device_cuda);
+
+                //SINGLE_SMPL::get()->setModelPath(modelPath);
+                g_smpl->setModelPath(modelPath);
+
+                //SINGLE_SMPL::get()->init();
+                g_smpl->init();
+
+                torch::Tensor vertices;
+                torch::Tensor beta0;
+                torch::Tensor theta0;
+
+                beta0 = 0.3 * torch::rand({ BATCH_SIZE, SHAPE_BASIS_DIM }).to(device_cuda);
+
+                float pose_rand_amplitude0 = 0.0;
+                theta0 = pose_rand_amplitude0 * torch::rand({ BATCH_SIZE, JOINT_NUM, 3 }) - pose_rand_amplitude0 / 2 * torch::ones({ BATCH_SIZE, JOINT_NUM, 3 });
+
+                //SINGLE_SMPL::get()->launch(beta0, theta0);
+                g_smpl->launch(beta0, theta0);
+                //torch::Tensor g_joints = SINGLE_SMPL::get()->getRestJoint();
+                torch::Tensor g_joints = g_smpl->getRestJoint();
+                //std::cout << "joints " << joints << std::endl;
+                if (SHOWOUT)
+                {
+                    std::cout << "g_joints" << g_joints << std::endl;
+
+                }
+
+
+
+ 
                 //获取人体框架
                 k4abt_skeleton_t skeleton;
                 k4abt_frame_get_body_skeleton(body_frame, i, &skeleton);
@@ -1180,7 +1199,7 @@ int main(int argc, char const* argv[])
                 
                 smplcam* p_smplcam = new smplcam(device_cuda);
                 torch::Tensor pose;
-                p_smplcam->m_smpl = SINGLE_SMPL::get();
+                p_smplcam->m_smpl = g_smpl;// SINGLE_SMPL::get();
                
                 //SINGLE_SMPL::destroy();
 
@@ -1195,13 +1214,14 @@ int main(int argc, char const* argv[])
 
                 //umeyama
                 torch::Tensor b = torch::tensor({ 16, 17, 1, 2, 12, 0 });
-                torch::Tensor joints = g_joints.index({ 0,{b} }).cpu();// [16] [17] .cpu();
+                torch::Tensor joints = g_joints.clone().index({0,{b.clone()}}).cpu();// [16] [17] .cpu();
                 if (SHOWOUT)
                 {
                     std::cout << "joints;" << joints << std::endl;
+                    std::cout << "b:" << b << std::endl;
                 }
 
-                torch::Tensor joints3d = target29_tensor.index({ 0,{b} }).cpu();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
+                torch::Tensor joints3d = target29_tensor.clone().index({ 0,{b.clone()}}).cpu().clone();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
                 if (SHOWOUT)
                 {
                     std::cout << "joints3d;" << joints3d << std::endl;
@@ -1223,7 +1243,7 @@ int main(int argc, char const* argv[])
                 cv::Mat dst = (Mat_<float>(3, 3) << 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);//anzs //cv::Mat::zeros(height, width, CV_32F);
                 try
                 {
-                    rot_global = rot_global.reshape({ 9,1 });
+                    rot_global = rot_global.clone().reshape({9,1}).clone();
                     if (SHOWOUT)
                     {
                         std::cout << "rot_global" << rot_global << std::endl;
@@ -1249,12 +1269,12 @@ int main(int argc, char const* argv[])
                     if (SHOWOUT)
                     {
                         //std::cout << "tttt" << tttt0 << std::endl;
-                        if (SHOWOUT)
-                        {
-                            std::cout << "dst_rot" << dst << std::endl;
-                            //std::cout << "dst_rot" << dst(0).dims << std::endl;
-                            //std::cout << "dst_rot" << dst(1).dims << std::endl;
-                        }
+                        //if (SHOWOUT)
+                        //{
+                        //    std::cout << "dst_rot" << dst << std::endl;
+                        //    //std::cout << "dst_rot" << dst(0).dims << std::endl;
+                        //    //std::cout << "dst_rot" << dst(1).dims << std::endl;
+                        //}
                     }
 
 
@@ -1263,9 +1283,8 @@ int main(int argc, char const* argv[])
                 {
                     std::cout << e.what() << std::endl;
                     throw;
-                }
-
-                dst = dst.reshape(1, 3);
+                }                
+                dst = dst.clone().reshape(1, 3).clone();
                 torch::Tensor rot = torch::from_blob(dst.data, { 1, 3 }, torch::kFloat);
                 if (SHOWOUT)
                 {
