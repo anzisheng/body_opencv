@@ -126,7 +126,7 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
 
 
 
-void write_json(ofstream& myfile, const int id, const torch::Tensor Rh, const torch::Tensor Th, const torch::Tensor poses, const torch::Tensor shapes)
+void write_json(ofstream& myfile, const int id, const torch::Tensor &Rh, const torch::Tensor &Th, const torch::Tensor &poses, const torch::Tensor &shapes)
 {
     /*
     * quat = quat.to(torch::kCPU);
@@ -221,7 +221,7 @@ void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
     for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
     {
         SMPL::person* p = *iter;
-        write_json(file, p->m_id, p->m_Rh.clone(), p->m_Th.clone(), p->m_poses.clone(), p->m_shapes.clone());
+        write_json(file, p->m_id, p->m_Rh, p->m_Th, p->m_poses, p->m_shapes);
         if (index != num - 1)
         {
             file << ",";
@@ -857,15 +857,13 @@ int main(int argc, char const* argv[])
         std::cerr << "Failed to open output file: " << output_filename << std::endl;
         return -1;
     }
-
-
-    //torch::Tensor one_test = g_joints.clone();
+       
 
 
     int frameId = 0;
     k4a_capture_t sensor_capture;
 
-    while(frameId < 10)
+    while(frameId < 20)
     {
         
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -1215,14 +1213,14 @@ int main(int argc, char const* argv[])
 
                 //umeyama
                 torch::Tensor b = torch::tensor({ 16, 17, 1, 2, 12, 0 });
-                torch::Tensor joints = g_joints.clone().index({0,{b.clone()}}).cpu();// [16] [17] .cpu();
+                torch::Tensor joints = g_joints.index({0,{b}}).cpu();// [16] [17] .cpu();
                 if (SHOWOUT)
                 {
                     std::cout << "joints;" << joints << std::endl;
                     std::cout << "b:" << b << std::endl;
                 }
 
-                torch::Tensor joints3d = target29_tensor.clone().index({ 0,{b.clone()}}).cpu().clone();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
+                torch::Tensor joints3d = target29_tensor.index({ 0,{b}}).cpu().clone();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
                 if (SHOWOUT)
                 {
                     std::cout << "joints3d;" << joints3d << std::endl;
@@ -1233,9 +1231,9 @@ int main(int argc, char const* argv[])
                 
 
                 torch::Tensor rot_global = std::get<0>(rot_trans);
-                rot_global = rot_global.clone();// std::get<0>(rot_trans);
+                //rot_global = rot_global.clone();// std::get<0>(rot_trans);
                 torch::Tensor trans_global = std::get<1>(rot_trans);
-                trans_global = trans_global.clone();
+                //trans_global = trans_global.clone();
                 if (SHOWOUT)
                 {
                     std::cout << "trans_global" << trans_global << std::endl;
@@ -1245,7 +1243,7 @@ int main(int argc, char const* argv[])
                 cv::Mat dst = (Mat_<float>(3, 1) << 0.0f, 0.0f, 0.0f );//anzs //cv::Mat::zeros(height, width, CV_32F);
                 try
                 {
-                    rot_global = rot_global.reshape({ 9,1 }).clone();
+                    rot_global = rot_global.reshape({ 9,1 });
                     if (SHOWOUT)
                     {
                         std::cout << "rot_global" << rot_global << std::endl;
@@ -1286,7 +1284,7 @@ int main(int argc, char const* argv[])
                     std::cout << e.what() << std::endl;
                     throw;
                 }                
-                dst = dst.reshape(1, 3).clone();
+                dst = dst.reshape(1, 3);// .clone();
                 torch::Tensor rot = torch::from_blob(dst.data, { 1, 3 }, torch::kFloat);
                 if (SHOWOUT)
                 {
@@ -1294,8 +1292,6 @@ int main(int argc, char const* argv[])
                 }
 
                 rot = rot.clone();
-
-
 
                 //int id = i;
                 torch::Tensor Rh = rot;// torch::tensor({ 1.0f, 1.0f, 1.0f });
