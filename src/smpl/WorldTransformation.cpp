@@ -636,7 +636,7 @@ torch::Tensor WorldTransformation::globalTransform(
         ancestor = TorchEx::indexing(m__kineTree,torch::IntArrayRef({0}), torch::IntArrayRef({i})).toType(torch::kLong);
         ancestor = ancestor.to(torch::kCPU);
         COUT_VAR(ancestor);
-        int ind = ancestor.data<int64_t>()[0];
+        int ind = ancestor.data_ptr<int64_t>()[0];
         COUT_VAR(ind);
         A = transformations[ind];
         COUT_VAR(A.sizes());

@@ -789,7 +789,8 @@ int main(int argc, char const* argv[])
 // 	cuda.set_index(0);
 
 
-    
+	using ms = std::chrono::milliseconds;
+	using clk = std::chrono::system_clock;
 
     k4a_device_t device = NULL;
     VERIFY(k4a_device_open(0, &device), "Open K4A Device failed!");
@@ -863,7 +864,7 @@ int main(int argc, char const* argv[])
     int frameId = 0;
     k4a_capture_t sensor_capture;
 
-    while(frameId < 20)
+    while(frameId < 200)
     {
         
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -910,7 +911,8 @@ int main(int argc, char const* argv[])
             if (num_bodies > 1)
             {
                 int p = 2;
-            }            
+            }
+            auto time_begin = clk::now();
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             for (size_t i = 0; i < num_bodies; i++)
             { 
@@ -1203,9 +1205,20 @@ int main(int argc, char const* argv[])
                 //SINGLE_SMPL::destroy();
 
 
-             
+                
+				auto begin0 = clk::now();
+
+                //auto duration = std::chrono::duration_cast<ms>(end0 - begin0);
+                //std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
 
                 pose = p_smplcam->call_forward(target29_tensor,/* g_joints ,*/frameId); //.hybrik(); // .skinning();
+
+				//auto end0 = clk::now();
+
+				auto duration = std::chrono::duration_cast<ms>(clk::now() - begin0);
+				std::cout << frameId << "th frame  call_forward : " << (double)duration.count() << " ms" << std::endl;
+
+                
                 if (SHOWOUT)
                 {
                     std::cout << pose << std::endl;
@@ -1484,7 +1497,9 @@ int main(int argc, char const* argv[])
 
                 //按smpl 格式 保存關節點，並計算pose
 
-            }            
+            }  
+			auto duration = std::chrono::duration_cast<ms>(clk::now() - time_begin);
+			std::cout <<"第" << frameId << "帧，共"<<num_bodies << "个人 :话费 " << (double)duration.count() << " ms" << std::endl;
 
         }
         //std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -1505,6 +1520,10 @@ int main(int argc, char const* argv[])
         ofstream myfile2(file);
         write_persons(g_persons, myfile2);
         myfile2.close();
+
+        //auto time_ = clk::now();
+        //auto duration = 
+		
 
 
         frameId++;
