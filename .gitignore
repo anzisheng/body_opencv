@@ -1,7 +1,6 @@
 .vs/
 x64/
 *.sln
-*.vcxproj
 *.filters
 *.user
 x64 - 副本debug方式可以运行，xyz2pose60ms/

@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <iostream>
 //#include <tbb/parallel_for.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+#include <stdio.h>
 #include <k4a/k4a.h>
 #include <k4abt.h>
 #include <math.h>
@@ -785,10 +789,14 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
     
 
 using namespace std;
-//using namespace torch;
-//#include "convert.cu"
-//extern "C" void kernel();
-//extern "C" void simpleD3DKernel();
+
+
+cudaError_t addWithCuda();
+
+__global__ void addKernel()
+{
+    printf("Hello, world from GPU!\n");
+}
 
 int main(int argc, char const* argv[])
 {
@@ -1223,6 +1231,7 @@ int main(int argc, char const* argv[])
 
                 //kernel<<<1, 3 >>>();
                 //simpleD3DKernel();
+                addWithCuda();
 
                 pose = p_smplcam->call_forward(target29_tensor,/* g_joints ,*/frameId); //.hybrik(); // .skinning();
 
@@ -1535,8 +1544,7 @@ int main(int argc, char const* argv[])
         myfile2.close();
 
         //auto time_ = clk::now();
-        //auto duration = 
-		
+        //auto duration = 		
 
 
         frameId++;
@@ -1544,4 +1552,10 @@ int main(int argc, char const* argv[])
     }   
     writer.release();
     return 0;
+}
+// Helper function for using CUDA to add vectors in parallel.
+cudaError_t addWithCuda()
+{
+    addKernel <<<1, 1 >>> ();
+    return  (cudaError_t)0;// cudaStatus;
 }

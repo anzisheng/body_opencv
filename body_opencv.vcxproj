@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{ac9d6945-e8a3-44c6-b3ef-2add2e50d832}</ProjectGuid>
+    <RootNamespace>bodyopencv</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseInteloneTBB>false</UseInteloneTBB>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.7.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="body_opencv.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\include;C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\include;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\include\k4a;E:\sdk\opencv\build\include;E:\sdk\opencv\build\include\opencv;E:\sdk\opencv\build\include\opencv2;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\include;C:\Program Files\Azure Kinect Body Tracking SDK\sdk\include;$(IncludePath);$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>E:\project\kinect\body_opencv\include\;E:\project\kinect\body_opencv\src\zlib;E:\project\kinect\body_opencv\src\numpyLib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include\torch\csrc\api\include;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include\c10\core</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\c10.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\kineto.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\torch.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\torch_cuda.lib;C:\Program Files\Azure Kinect Body Tracking SDK\sdk\windows-desktop\amd64\release\lib\k4abt.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;E:\project\kinect\body_opencv\x64\Debug\zlib.lib;E:\sdk\opencv\build\x64\vc15\lib\opencv_world3414d.lib;C:\Program Files\NVIDIA Corporation\NvToolsExt\\lib\x64\nvToolsExt64_1.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\lib\x64\cudart.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\caffe2_nvrtc.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\c10_cuda.lib;opengl32.lib;winmm.lib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\lib\torch_cpu.lib;C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows\compiler\lib\intel64_win\libiomp5md.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;C:\Program Files\NVIDIA Corporation\NvToolsExt\lib\x64\nvToolsExt64_1.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\lib\x64\cufft.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\lib\x64\curand.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\lib\x64\cublas.lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\lib\x64\cublasLt.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\include;E:\project\kinect\body_opencv\include\;E:\project\kinect\body_opencv\src\zlib;E:\project\kinect\body_opencv\src\numpyLib;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include\torch\csrc\api\include;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include;E:\sdk\libtorch-win-shared-with-deps-2.0.1+cu117\libtorch\include\c10\core</AdditionalIncludeDirectories>
+      <AdditionalOptions> /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\lib\intel64\vc14\tbb12.lib;tbb12_debug.lib;c10.lib;kineto.lib;torch.lib;torch_cuda.lib;C:\Program Files\Azure Kinect Body Tracking SDK\sdk\windows-desktop\amd64\release\lib\k4abt.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;E:\project\kinect\body_opencv\x64\Debug\zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\lib\intel64\vc14;E:\sdk\libtorch-win-shared-with-deps-debug-2.0.1+cu117\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <CudaCompile>
+      <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.7\include;%(Include)</Include>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CudaCompile Include="main.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <ClCompile Include="src\cam\smplcam.cpp" />
+    <ClCompile Include="src\cam\smpl_layer.cpp" />
+    <ClCompile Include="src\definition\def.cpp" />
+    <ClCompile Include="src\numpyLib\cnpy.cpp" />
+    <ClCompile Include="src\smpl\BlendShape.cpp" />
+    <ClCompile Include="src\smpl\JointRegression.cpp" />
+    <ClCompile Include="src\smpl\LinearBlendSkinning.cpp" />
+    <ClCompile Include="src\smpl\person.cpp" />
+    <ClCompile Include="src\smpl\SMPL.cpp" />
+    <ClCompile Include="src\smpl\WorldTransformation.cpp" />
+    <ClCompile Include="src\toolbox\Exception.cpp" />
+    <ClCompile Include="src\toolbox\TorchEx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\smpl\person.h" />
+    <ClInclude Include="include\smpl\SMPL.h" />
+    <ClInclude Include="main.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="convert.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.7.targets" />
+  </ImportGroup>
+</Project>
