@@ -4,8 +4,10 @@
 #include <k4a/k4a.h>
 #define _USE_MATH_DEFINES
 #include <stdio.h>
+//__global__ void kernel();
 #include <stdlib.h>
 #include <iostream>
+//#include <tbb/parallel_for.h>
 #include <k4a/k4a.h>
 #include <k4abt.h>
 #include <math.h>
@@ -24,6 +26,10 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include "torch/script.h"
+//#include "C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\include\tbb\parallel_for.h"
+
+//#include <tbb/parallel_for.h>
+//#include <tbb/parallel_for.h>
 //#include "main.h"
 using namespace torch::indexing;
 using namespace std;
@@ -780,6 +786,9 @@ std::vector<torch::Tensor>  convert25_29(std::vector<k4a_float3_t> source25)
 
 using namespace std;
 //using namespace torch;
+//#include "convert.cu"
+//extern "C" void kernel();
+//extern "C" void simpleD3DKernel();
 
 int main(int argc, char const* argv[])
 {
@@ -864,7 +873,7 @@ int main(int argc, char const* argv[])
     int frameId = 0;
     k4a_capture_t sensor_capture;
 
-    while(frameId < 200)
+    while(frameId < 20)
     {
         
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -914,6 +923,7 @@ int main(int argc, char const* argv[])
             }
             auto time_begin = clk::now();
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
+            
             for (size_t i = 0; i < num_bodies; i++)
             { 
 
@@ -1210,6 +1220,9 @@ int main(int argc, char const* argv[])
 
                 //auto duration = std::chrono::duration_cast<ms>(end0 - begin0);
                 //std::cout << "Time duration to compute pose: " << (double)duration.count()  << " ms" << std::endl;
+
+                //kernel<<<1, 3 >>>();
+                //simpleD3DKernel();
 
                 pose = p_smplcam->call_forward(target29_tensor,/* g_joints ,*/frameId); //.hybrik(); // .skinning();
 
