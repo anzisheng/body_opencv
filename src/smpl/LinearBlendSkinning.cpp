@@ -685,8 +685,8 @@ namespace smpl
         //rel_rest_pose[:, 1 : ] -= rest_pose[:, parents[1:]].clone();
 
  		std::vector<int> parents_exclude_0_v = { 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21, 15, 22, 23, 10, 11 };
-        torch::Tensor parents_exclude_0 = torch::tensor(parents_exclude_0_v);// .data(), { 29 }).toType(torch::kInt8);
-        parents_exclude_0 = parents_exclude_0.to(m__device);
+        torch::Tensor parents_exclude_0 = torch::tensor(parents_exclude_0_v).to(device);// .data(), { 29 }).toType(torch::kInt8);
+        //parents_exclude_0 = parents_exclude_0.to(m__device);
         if (SHOWOUT)
         {
             std::cout << "parents_exclude_0:" << parents_exclude_0.sizes() << parents_exclude_0.device() << parents_exclude_0 << std::endl;
@@ -737,7 +737,8 @@ namespace smpl
 
         //torch::Tensor b2 = torch::tensor({ 0, 1, 3, 2,0, 1, 3, 2,0, 1, 3, 2,0, 1, 3, 2,0, 1, 3, 2,0, 1, 3, 2,0, 1, 3, 2 });
 
-        torch::Tensor rel_pose_skeleton = torch::unsqueeze(pose_skeleton.clone(), -1).detach();
+        torch::Tensor rel_pose_skeleton = torch::unsqueeze(pose_skeleton, -1);// .detach();
+        rel_pose_skeleton = rel_pose_skeleton.to(device);
 		torch::Tensor temp = torch::squeeze(rel_pose_skeleton);
         if (SHOWOUT)
         {
@@ -746,10 +747,14 @@ namespace smpl
 
         try 
         {
+            //std::cout <<"parents_exclude_0 "<< parents_exclude_0 << endl;
+            //std::cout <<"rel_pose_skeleton"<< rel_pose_skeleton << endl;
+
             rel_pose_skeleton.index({ Slice(),Slice(1,None) }) = rel_pose_skeleton.index({ Slice(),Slice(1,None) }) - rel_pose_skeleton.index({ Slice(),{parents_exclude_0} }).clone();
         }
 		catch (std::exception& e)
 		{
+
 			std::cout << e.what() << std::endl;
 			throw;
 		}
@@ -772,6 +777,7 @@ namespace smpl
 // 			final_pose_skeleton = final_pose_skeleton - final_pose_skeleton[:, 0 : 1] + rel_rest_pose[:, 0 : 1]
         
         torch::Tensor final_pose_skeleton = torch::unsqueeze(pose_skeleton.clone(), -1);
+        final_pose_skeleton = final_pose_skeleton.to(device);
         try
         {
             final_pose_skeleton = final_pose_skeleton - final_pose_skeleton.index({ Slice(), Slice(0,1) }) + rel_rest_pose.index({ Slice(), Slice(0,1) });//
