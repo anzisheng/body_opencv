@@ -2151,7 +2151,7 @@ namespace smpl
             //losses.append(loss);
             losses.push_back(loss);
             //rots.append(rot.copy())
-            rots.push_back(rot.clone());
+            rots.push_back(rot/*.clone()*/);
 
         }
 

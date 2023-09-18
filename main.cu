@@ -1,5 +1,7 @@
 
 //#include <torch/torch.h>
+//#include <torch/extension.h>
+//#include <torch/extension.h>
 #define _USE_MATH_DEFINES
 #include <k4a/k4a.h>
 #define _USE_MATH_DEFINES
@@ -10,6 +12,7 @@
 //#include <tbb/parallel_for.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <torch/extension.h>
 
 #include <stdio.h>
 #include <k4a/k4a.h>
@@ -437,7 +440,7 @@ std::tuple<torch::Tensor, torch::Tensor> umeyama(torch::Tensor src, torch::Tenso
         //losses.append(loss);
         losses.push_back(loss);
         //rots.append(rot.copy())
-        rots.push_back(rot.clone());
+        rots.push_back(rot/*.clone()*/);
 
     }
 
@@ -792,10 +795,108 @@ using namespace std;
 
 
 cudaError_t addWithCuda();
+cudaError_t umeyama_cuda(int thread_num, torch::Tensor src, torch::Tensor dst);
+
+__device__ int ss(torch::Tensor src)
+{
+    //int num = src.sizes()[0];
+    return 0;// num;
+}
+__global__ void umeyamaKernel(torch::Tensor src, torch::Tensor dst)
+{
+    printf("Hello, world from GPU!\n ");
+    //src = src.to(torch::kCUDA).clone();
+    //int s = src.size(0);
+    // 
+    // 
+    //int tt = ss(dst);
+    //int num = dst.size(0);// [0] ;
+    //int dim = src.size(1);
+/*
+    if(SHOWOUT)
+    {
+        printf("Hello, world from GPU!\n %d, %d", num,dim);
+    }
+    // Compute mean of src and dst.
+    torch::Tensor src_mean = src.mean(0);
+*/
+
+}
 
 __global__ void addKernel()
 {
     printf("Hello, world from GPU!\n");
+}
+
+//#include <torch/extension.h>
+
+
+template <typename scalar_t>
+__global__ void trilinear_fw_kernel(
+    const torch::PackedTensorAccessor<scalar_t, 3, torch::RestrictPtrTraits, size_t> feats,
+    const torch::PackedTensorAccessor<scalar_t, 2, torch::RestrictPtrTraits, size_t> points,
+    torch::PackedTensorAccessor<scalar_t, 2, torch::RestrictPtrTraits, size_t> feat_interp
+) 
+{
+    const int n = blockIdx.x * blockDim.x + threadIdx.x;
+    const int f = blockIdx.y * blockDim.y + threadIdx.y;
+    if (n >= feats.size(0) || f >= feats.size(2)) return;
+    // point -1~1
+    const scalar_t u = (points[n][0] + 1) / 2;
+    const scalar_t v = (points[n][1] + 1) / 2;
+    const scalar_t w = (points[n][2] + 1) / 2;
+
+    const scalar_t a = (1 - v) * (1 - w);
+    const scalar_t b = (1 - v) * w;
+    const scalar_t c = v * (1 - w);
+    const scalar_t d = 1 - a - b - c;
+    feat_interp[n][f] = (1 - u) * (a * feats[n][0][f] +
+        b * feats[n][1][f] +
+        c * feats[n][2][f] +
+        d * feats[n][3][f]) +
+        u * (a * feats[n][4][f] +
+            b * feats[n][5][f] +
+            c * feats[n][6][f] +
+            d * feats[n][7][f]);
+}
+
+
+template <typename scalar_t>
+torch::Tensor trilinear_fw_cu(
+    const torch::Tensor feats,
+    const torch::Tensor points
+) 
+{
+    
+    const int N = feats.size(0), F = feats.size(2);
+
+    torch::Tensor feat_interp = torch::empty({ N, F }, feats.options());
+
+    const dim3 threads(16, 16);
+    const dim3 blocks((N + threads.x - 1) / threads.x, (F + threads.y - 1) / threads.y);
+
+    trilinear_fw_kernel<scalar_t> <<<blocks, threads >>> (
+        feats.packed_accessor<scalar_t, 3, torch::RestrictPtrTraits, size_t>(),
+        points.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>(),
+        feat_interp.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>()
+        );
+
+    return feats;
+
+}
+
+#define CHECK_CUDA(x) TORCH_CHECK(x.is_cuda(), #x " must be a CUDA tensor")
+#define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
+#define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
+
+torch::Tensor trilinear_interpolation_fw(
+    const torch::Tensor feats,
+    const torch::Tensor points
+) {
+    CHECK_INPUT(feats);
+    CHECK_INPUT(points);
+
+    return  trilinear_fw_cu<float>(feats, points);
 }
 
 int main(int argc, char const* argv[])
@@ -804,7 +905,31 @@ int main(int argc, char const* argv[])
     
 // 	torch::Device cuda(torch::kCUDA);    
 // 	cuda.set_index(0);
+    torch::DeviceType device_type_global;
 
+    if (torch::cuda::is_available())
+    {
+        device_type_global = torch::kCUDA;// torch::kCUDA;
+    }
+    else
+    {
+        device_type_global = torch::kCPU;
+    }
+    torch::Device device_global(device_type_global, 0);
+    device_global.set_index(0);
+
+
+    const int N = 65536;
+    const int F = 256;
+    torch::Tensor rand = torch::rand({ N, 8, F }).to(device_global);// .to(torch::CUDA);// , device = 'cuda')
+    torch::Tensor feats = rand.clone().requires_grad_();
+    torch::Tensor feats2 = rand.clone().requires_grad_();
+    //cout << feats << endl;
+    torch::Tensor points = torch::rand({ N, 3 }).to(device_global);// , device = 'cuda') * 2 - 1
+    //cout << points << endl << feats << endl;
+    torch::Tensor feat_interp = trilinear_interpolation_fw(feats, points);
+
+    cout << feat_interp.sizes() << endl;
 
 	using ms = std::chrono::milliseconds;
 	using clk = std::chrono::system_clock;
@@ -1231,7 +1356,8 @@ int main(int argc, char const* argv[])
 
                 //kernel<<<1, 3 >>>();
                 //simpleD3DKernel();
-                addWithCuda();
+                //addWithCuda();
+                //umeyama_cuda(1,target29_tensor);
 
                 pose = p_smplcam->call_forward(target29_tensor,/* g_joints ,*/frameId); //.hybrik(); // .skinning();
 
@@ -1255,12 +1381,13 @@ int main(int argc, char const* argv[])
                     std::cout << "b:" << b << std::endl;
                 }
 
-                torch::Tensor joints3d = target29_tensor.index({ 0,{b}}).cpu().clone();//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
+                torch::Tensor joints3d = target29_tensor.index({ 0,{b}}).cpu()/*.clone()*/;//[:, [16, 17, 1, 2, 12, 0]])  #   [[5, 2, 12, 9]]
                 if (SHOWOUT)
                 {
                     std::cout << "joints3d;" << joints3d << std::endl;
                 }
                 std::tuple<torch::Tensor, torch::Tensor> rot_trans = umeyama(joints, joints3d);
+                umeyama_cuda(1, joints, joints3d);
                 //torch::Tensor rot_global;
                 //torch::Tensor trans_global;
                 
@@ -1556,6 +1683,13 @@ int main(int argc, char const* argv[])
 // Helper function for using CUDA to add vectors in parallel.
 cudaError_t addWithCuda()
 {
-    addKernel <<<1, 1 >>> ();
+    addKernel <<<1, 4 >>> ();
+    return  (cudaError_t)0;// cudaStatus;
+}
+cudaError_t umeyama_cuda(int thread_num, torch::Tensor src, torch::Tensor dst)
+{
+    //src = src.to(torch::kCUDA);
+
+    umeyamaKernel<<<1, thread_num >>> ( src, dst);
     return  (cudaError_t)0;// cudaStatus;
 }
