@@ -7,12 +7,23 @@
 #define _USE_MATH_DEFINES
 #include <stdio.h>
 //__global__ void kernel();
+//#include "hiredis.h"
 #include <stdlib.h>
 #include <iostream>
 //#include <tbb/parallel_for.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <torch/extension.h>
+
+#include <assert.h>
+#include <winsock2.h>
+#include <string.h>
+#include <tuple>
+#include <iostream>
+#include <sstream>
+#include <string.h>
+#include"hiredis/hiredis.h"
+
 
 #include <stdio.h>
 #include <k4a/k4a.h>
@@ -139,6 +150,7 @@ torch::Tensor k4a2torch_float( float x,float y, float z)
 
 
 
+
 void write_json(ofstream& myfile, const int id, const torch::Tensor &Rh, const torch::Tensor &Th, const torch::Tensor &poses, const torch::Tensor &shapes)
 {
     /*
@@ -225,6 +237,29 @@ void write_json(ofstream& myfile, const int id, const torch::Tensor &Rh, const t
 
 }
 
+
+void write_redis(std::vector<SMPL::person*> persons, char* msg, int stamp,int obj_id)
+{
+    strcat(msg, "{\"type\": \"setFrame\"\n");
+
+    char string1[16] = { 0 };
+    itoa(stamp, string1, 10);
+
+    char string2[16] = { 0 };
+    itoa(obj_id, string2, 10);
+
+
+    char* buffer = (char *)malloc(100);
+    memset(buffer, 0, 100);
+
+    //char* temp = "\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ string1 }_{string2}\" ;//"\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ string1 }_{string2}\" ;
+    //printf(temp);
+
+    //strcat(msg, "\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ self.timestamp }_{obj_id}\",\n");
+
+    printf(msg);
+
+}
 
 void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
 {
@@ -831,6 +866,7 @@ __global__ void addKernel()
 //#include <torch/extension.h>
 
 
+/*
 template <typename scalar_t>
 __global__ void trilinear_fw_kernel(
     const torch::PackedTensorAccessor<scalar_t, 3, torch::RestrictPtrTraits, size_t> feats,
@@ -859,7 +895,7 @@ __global__ void trilinear_fw_kernel(
             c * feats[n][6][f] +
             d * feats[n][7][f]);
 }
-
+*/
 
 template <typename scalar_t>
 torch::Tensor trilinear_fw_cu(
@@ -875,12 +911,13 @@ torch::Tensor trilinear_fw_cu(
     const dim3 threads(16, 16);
     const dim3 blocks((N + threads.x - 1) / threads.x, (F + threads.y - 1) / threads.y);
 
+    /*
     trilinear_fw_kernel<scalar_t> <<<blocks, threads >>> (
         feats.packed_accessor<scalar_t, 3, torch::RestrictPtrTraits, size_t>(),
         points.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>(),
         feat_interp.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>()
         );
-
+        */
     return feats;
 
 }
@@ -899,12 +936,166 @@ torch::Tensor trilinear_interpolation_fw(
     return  trilinear_fw_cu<float>(feats, points);
 }
 
+
+class RedisConnect {
+public:
+    RedisConnect() :redisCon(nullptr), reply(nullptr) {}
+    bool Init(const std::string& ip, int port) {
+        if (nullptr != redisCon) {
+            return false;
+        }
+        redisCon = redisConnect(ip.c_str(), port);
+        if (redisCon->err) {
+            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+    void freeReply()
+    {
+        if (nullptr != reply)
+        {
+            ::freeReplyObject(reply);
+            reply = nullptr;
+        }
+    }
+
+    template<class T, class... Args>
+    bool HashSet(const std::string command, T head, Args... rest) {
+        std::stringstream ss;
+        ss << command << " " << head << " ";
+        return HashSetInner(ss, rest...);
+    }
+
+    template<typename T>
+    bool Set(const std::string& key, const T& value)
+    {
+        bool bret = false;
+        std::stringstream ss;
+        ss << "SET " << key << " " << value;
+        std::string s;
+        getline(ss, s);
+        return Set(s);
+    }
+
+
+    bool InitWithTimeout(const std::string& ip, int port, int seconds) {
+        if (nullptr != redisCon) {
+            return false;
+        }
+        struct timeval tv;
+        tv.tv_sec = seconds;
+        tv.tv_usec = 0;
+        redisCon = redisConnectWithTimeout(ip.c_str(), port, tv);
+        if (redisCon->err) {
+            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    ~RedisConnect() {
+        freeReply();
+        if (nullptr == redisCon) {
+            redisFree(redisCon);
+            redisCon = nullptr;
+        }
+    }
+private:
+    bool HashSetInner(std::stringstream& ss)
+    {
+        std::string data;
+        getline(ss, data);
+        //std::cout << __FUNCTION__ << " " << data << std::endl;
+        bool bret = false;
+        freeReply();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+        if (reply->type == REDIS_REPLY_ERROR ||
+            (reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") != 0))
+        {
+            if (reply->str != nullptr) {
+                std::cout << reply->str << std::endl;
+            }
+            std::cout << "Failed to execute " << __FUNCTION__ << std::endl << std::endl;
+            return bret;
+        }
+
+        bret = true;
+        return bret;
+    }
+
+    template<class T, class... Args>
+    bool HashSetInner(std::stringstream& ss, T head, Args... rest)
+    {
+        ss << head << " ";
+        return HashSetInner(ss, rest...);
+    }
+
+    bool Set(std::string data)
+    {
+        bool bret = false;
+        freeReply();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
+        {
+            std::cout << reply->str << std::endl;
+            std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
+            return bret;
+        }
+        bret = true;
+        return bret;
+    }
+
+    redisContext* redisCon;
+    redisReply* reply;
+};
+
+
+
+
+
 int main(int argc, char const* argv[])
 {
     //cuda device    
     
 // 	torch::Device cuda(torch::kCUDA);    
 // 	cuda.set_index(0);
+
+    unsigned int j;
+    //redisContext* c;
+    //redisReply* reply;
+
+
+    RedisConnect r;
+    redisReply* reply;
+
+    bool b = r.InitWithTimeout("127.0.0.1", 6379, 1);
+
+    if (!b)
+        return -1;
+
+    r.Set("testtimes", 1);
+    r.Set("float:pi", 3.14159265);
+    r.Set("string", "test");
+
+
+
+    r.HashSet("hset", "myhash", "field1", 123.2342343);
+    r.HashSet("hmset", "myhash", "field1", 1111, "field2", "f2");
+    r.HashSet("hset", "myhash", "field1", 123.2342343);
+    r.HashSet("hmset", "myhash", "field1", 1111, "field2", "f2");
+
+    //wrong command
+    r.HashSet("hset", "myhash", "field1", 1, 123.2342343);
+    r.HashSet("hmset", "myhash", "field1", 1, 1111, "field2", "f2");
+
+
+
+
+
     torch::DeviceType device_type_global;
 
     if (torch::cuda::is_available())
@@ -1109,12 +1300,13 @@ int main(int argc, char const* argv[])
 
 
 
-            auto time_begin = clk::now();
+           auto time_begin = clk::now();
+//           const std::time_t t_c = std::chrono::system_clock::to_time_t(time_begin);
+//           std::cout << "The system clock is currently at " << int(t_c);
 
             for (size_t i = 0; i < num_bodies; i++)
             { 
-
-                
+                              
 
             
  
@@ -1678,6 +1870,15 @@ int main(int argc, char const* argv[])
 
         ofstream myfile2(file);
         write_persons(g_persons, myfile2);
+        int msg_length = 1000;
+        char* msg = (char*)malloc(msg_length);
+        memset(msg, 0, msg_length);
+        auto timestamp = clk::now();
+        const std::time_t t_c = std::chrono::system_clock::to_time_t(timestamp);
+        int stamp = int(t_c);
+        std::cout << "The system clock is currently at " << int(t_c);
+
+        //write_redis(g_persons, msg, stamp);
         myfile2.close();
 
         //auto time_ = clk::now();
@@ -1700,6 +1901,6 @@ cudaError_t umeyama_cuda(int thread_num, torch::Tensor src, torch::Tensor dst)
 {
     //src = src.to(torch::kCUDA);
 
-    umeyamaKernel<<<1, thread_num >>> ( src, dst);
+    //umeyamaKernel<<<1, thread_num >>> ( src, dst);
     return  (cudaError_t)0;// cudaStatus;
 }
