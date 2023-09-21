@@ -44,6 +44,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include "torch/script.h"
+#include "nlohmann/json.hpp"
+
 //#include "C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\include\tbb\parallel_for.h"
 
 //#include <tbb/parallel_for.h>
@@ -974,10 +976,24 @@ public:
         bool bret = false;
         std::stringstream ss;
         ss << "SET " << key << " " << value;
+        //ss << "PUBLISH " << key << " " << value;
         std::string s;
         getline(ss, s);
         return Set(s);
     }
+
+    template<typename T>
+    bool Publish(const std::string& key, const T& value)
+    {
+        bool bret = false;
+        std::stringstream ss;
+        ss << "PUBLISH " << key << " " << value;
+        //ss << "PUBLISH " << key << " " << value;
+        std::string s;
+        getline(ss, s);
+        return Publish(s);
+    }
+
 
 
     bool InitWithTimeout(const std::string& ip, int port, int seconds) {
@@ -1049,13 +1065,33 @@ private:
         return bret;
     }
 
+    bool Publish(std::string data)
+    {
+        bool bret = false;
+        freeReply();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+/*        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
+        {
+            std::cout << reply->str << std::endl;
+            std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
+            return bret;
+        }
+*/
+
+        bret = true;
+        return bret;
+    }
+
+
+
     redisContext* redisCon;
     redisReply* reply;
 };
 
 
 
-
+using json = nlohmann::json;
 
 int main(int argc, char const* argv[])
 {
@@ -1077,11 +1113,49 @@ int main(int argc, char const* argv[])
     if (!b)
         return -1;
 
-    r.Set("testtimes", 1);
-    r.Set("float:pi", 3.14159265);
-    r.Set("string", "test");
+    //r.Set("testtimes", 1);
+    //r.Set("float:pi", 3.14159265);
+    //r.Set("string", "test");
+
+    
+    json json_msg{
+        { "name", "Judd Trump"},
+        { "credits", 1754500 },
+        { "ranking", 1}
+    };
 
 
+    //std::stringstream bone_names;
+    //std::stringstream bone_names;
+
+    //string pref = "";//# ""
+    /*
+    bone_names << "[\'Pelvis\'," << "\'L_Hip\'," << "\'R_Hip\'," << "\'Spine1\'," << "\'L_Knee\'," << "\'R_Knee\', " << "\'Spine2\', " << "\'L_Ankle\', " << "\'R_Ankle\'," << "\'Spine3\',"
+               << "\'L_Foot\'," <<"\'R_Foot\', "<<"\'Neck\', " << "\'L_Collar\'," <<"\'R_Collar\'," <<"\'Head\'," <<"\'L_Shoulder\', " << "\'R_Shoulder\', "<<"\'L_Elbow\'," <<"\'R_Elbow\',"
+               <<"\'L_Wrist\', " << "\'R_Wrist\'," <<"\'L_Hand\', "<<"\'R_Hand\']";
+    */    
+    /*pref +  pref +
+        pref + pref + pref + pref + pref + ,
+        pref +  pref + pref + pref +  pref + 
+        pref +  pref + pref + pref +  pref + 
+        pref + pref +  pref + pref + ;*/
+    //std::cout << bone_names.str() << std::endl;
+
+   
+
+    //ss << "{type:";
+    //std::cout << ss.str() << std::endl;
+
+        //\"setFrame\"\n\"data\": {\"modelName\": f\"{" << "audiChinaHeadquater" << "}_{" << timestamp << "}_{" << obj_id << "},\n"
+        //<< "\t \"boneNames\":" << bone_names.str() << "\n\t\"scene\": audiChinaHeadquater," << "\n \"frameData\": {\"poses\":";
+
+    //ss << ""{"type": "setFrame"" << ""data" : {"modelName": f"{self.scene_name}_{self.timestamp}_{obj_id}"" < <std::endl;
+    //ss << "SET " << key << " " << value;
+
+    std::string s =  json_msg.dump(4);// .encode('utf-8');
+    //json_msg.toStyledString()
+
+    r.Publish("channel message", s);
 
     r.HashSet("hset", "myhash", "field1", 123.2342343);
     r.HashSet("hmset", "myhash", "field1", 1111, "field2", "f2");
@@ -1894,7 +1968,7 @@ int main(int argc, char const* argv[])
 // Helper function for using CUDA to add vectors in parallel.
 cudaError_t addWithCuda()
 {
-    addKernel <<<1, 4 >>> ();
+    //addKernel <<<1, 4 >>> ();
     return  (cudaError_t)0;// cudaStatus;
 }
 cudaError_t umeyama_cuda(int thread_num, torch::Tensor src, torch::Tensor dst)
