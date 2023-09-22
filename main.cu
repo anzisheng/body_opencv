@@ -45,6 +45,7 @@
 #include <opencv2/core.hpp>
 #include "torch/script.h"
 #include "nlohmann/json.hpp"
+//#include <json/json.h>
 
 //#include "C:\Program Files (x86)\Intel\oneAPI\tbb\2021.10.0\include\tbb\parallel_for.h"
 
@@ -239,28 +240,217 @@ void write_json(ofstream& myfile, const int id, const torch::Tensor &Rh, const t
 
 }
 
+/////////////////////////////////////////////////////////
 
-void write_redis(std::vector<SMPL::person*> persons, char* msg, int stamp,int obj_id)
+class RedisConnect {
+public:
+    RedisConnect() :redisCon(nullptr), reply(nullptr) {}
+    bool Init(const std::string& ip, int port) {
+        if (nullptr != redisCon) {
+            return false;
+        }
+        redisCon = redisConnect(ip.c_str(), port);
+        if (redisCon->err) {
+            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+    void freeReply()
+    {
+        if (nullptr != reply)
+        {
+            ::freeReplyObject(reply);
+            reply = nullptr;
+        }
+    }
+
+    template<class T, class... Args>
+    bool HashSet(const std::string command, T head, Args... rest) {
+        std::stringstream ss;
+        ss << command << " " << head << " ";
+        return HashSetInner(ss, rest...);
+    }
+
+    template<typename T>
+    bool Set(const std::string& key, const T& value)
+    {
+        bool bret = false;
+        std::stringstream ss;
+        ss << "SET " << key << " " << value;
+        //ss << "PUBLISH " << key << " " << value;
+        std::string s;
+        getline(ss, s);
+        return Set(s);
+    }
+
+    template<typename T>
+    bool Publish(const std::string& key, const T& value)
+    {
+        bool bret = false;
+        std::stringstream ss;
+        ss << "PUBLISH " << key << " " << value;
+        //ss << "PUBLISH " << key << " " << value;
+        std::string s;
+        getline(ss, s);
+        return Publish(s);
+    }
+
+
+
+    bool InitWithTimeout(const std::string& ip, int port, int seconds) {
+        if (nullptr != redisCon) {
+            return false;
+        }
+        struct timeval tv;
+        tv.tv_sec = seconds;
+        tv.tv_usec = 0;
+        redisCon = redisConnectWithTimeout(ip.c_str(), port, tv);
+        if (redisCon->err) {
+            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    ~RedisConnect() {
+        freeReply();
+        if (nullptr == redisCon) {
+            redisFree(redisCon);
+            redisCon = nullptr;
+        }
+    }
+private:
+    bool HashSetInner(std::stringstream& ss)
+    {
+        std::string data;
+        getline(ss, data);
+        //std::cout << __FUNCTION__ << " " << data << std::endl;
+        bool bret = false;
+        freeReply();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+        if (reply->type == REDIS_REPLY_ERROR ||
+            (reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") != 0))
+        {
+            if (reply->str != nullptr) {
+                std::cout << reply->str << std::endl;
+            }
+            std::cout << "Failed to execute " << __FUNCTION__ << std::endl << std::endl;
+            return bret;
+        }
+
+        bret = true;
+        return bret;
+    }
+
+    template<class T, class... Args>
+    bool HashSetInner(std::stringstream& ss, T head, Args... rest)
+    {
+        ss << head << " ";
+        return HashSetInner(ss, rest...);
+    }
+
+    bool Set(std::string data)
+    {
+        bool bret = false;
+        freeReply();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
+        {
+            std::cout << reply->str << std::endl;
+            std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
+            return bret;
+        }
+        bret = true;
+        return bret;
+    }
+
+    bool Publish(std::string data)
+    {
+        //typedef unsigned char byte;
+        bool bret = false;
+        freeReply();
+        //byte* px = (byte*)data.c_str();
+        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
+
+        /*        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
+                {
+                    std::cout << reply->str << std::endl;
+                    std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
+                    return bret;
+                }
+        */
+
+        bret = true;
+        return bret;
+    }
+
+
+
+    redisContext* redisCon;
+    redisReply* reply;
+};
+
+
+
+
+
+
+void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timestamp, int frame_id)
 {
-    strcat(msg, "{\"type\": \"setFrame\"\n");
-
-    char string1[16] = { 0 };
-    itoa(stamp, string1, 10);
-
-    char string2[16] = { 0 };
-    itoa(obj_id, string2, 10);
+    //string name = "dddd"+ string(obj_id);
+    //int timestamp = 1111113;
+    //int obj_id = 4;
 
 
-    char* buffer = (char *)malloc(100);
-    memset(buffer, 0, 100);
+    //torch::Tensor Thtemp = torch::ones({ 72 });
+    using json = nlohmann::json;
+    for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
+    {
+        SMPL::person* p = *iter;
+        std::vector<float>  thetas(72);
+        float* ptr_Th = (float*)p->m_poses.data_ptr();
+        for (size_t i = 0; i < 72; i++)
+        {
+            thetas[i] = (float)*((ptr_Th + i));
+            //myfile << (float)*((ptr_Th + i));
+        }
 
-    //char* temp = "\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ string1 }_{string2}\" ;//"\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ string1 }_{string2}\" ;
-    //printf(temp);
+        std::vector<float>  trans(3);
+        ptr_Th = (float*)p->m_Th.data_ptr();
+        for (size_t i = 0; i < 3; i++)
+        {
+            trans[i] = (float)*((ptr_Th + i));
+        }
 
-    //strcat(msg, "\"data\": {\"modelName\": f\"{\"audiChinaHeadquater\"}_{ self.timestamp }_{obj_id}\",\n");
 
-    printf(msg);
+        ostringstream oss;
+        oss << "audiChinaHeadquater_" << timestamp << "_" << p->m_id;
+        json ex3 = {
+        {"type",    "setFrame"},
+        {"data", {{"modelName",oss.str()},
+        {"boneNames",{"Pelvis","L_Hip","R_Hip","Spine1","L_Knee", "R_Knee", "Spine2", "L_Ankle","R_Ankle","Spine3", "L_Foot", "R_Foot", "Neck", "L_Collar", "R_Collar", "Head", "L_Shoulder",
+        "R_Shoulder","L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist","L_Hand", "R_Hand"}},
+        {"scene","audiChinaHeadquater"},
+        {"frameData",{"poses",thetas},{"trans",trans}},
+         {"frame_id",frame_id},
+         {"modelUrl", "/models/unionavatar/biden_smpl.glb"},
+         {"create",true},
+         {"clamp", true}
+        },
+        } };
 
+        std::string s1 = ex3.dump();// .encode('utf-8');
+
+        //r.Publish(" message", s);
+        r.Publish(" message", s1);
+    }
+   
+
+ 
 }
 
 void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
@@ -939,157 +1129,6 @@ torch::Tensor trilinear_interpolation_fw(
 }
 
 
-class RedisConnect {
-public:
-    RedisConnect() :redisCon(nullptr), reply(nullptr) {}
-    bool Init(const std::string& ip, int port) {
-        if (nullptr != redisCon) {
-            return false;
-        }
-        redisCon = redisConnect(ip.c_str(), port);
-        if (redisCon->err) {
-            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
-            return false;
-        }
-
-        return true;
-    }
-    void freeReply()
-    {
-        if (nullptr != reply)
-        {
-            ::freeReplyObject(reply);
-            reply = nullptr;
-        }
-    }
-
-    template<class T, class... Args>
-    bool HashSet(const std::string command, T head, Args... rest) {
-        std::stringstream ss;
-        ss << command << " " << head << " ";
-        return HashSetInner(ss, rest...);
-    }
-
-    template<typename T>
-    bool Set(const std::string& key, const T& value)
-    {
-        bool bret = false;
-        std::stringstream ss;
-        ss << "SET " << key << " " << value;
-        //ss << "PUBLISH " << key << " " << value;
-        std::string s;
-        getline(ss, s);
-        return Set(s);
-    }
-
-    template<typename T>
-    bool Publish(const std::string& key, const T& value)
-    {
-        bool bret = false;
-        std::stringstream ss;
-        ss << "PUBLISH " << key << " " << value;
-        //ss << "PUBLISH " << key << " " << value;
-        std::string s;
-        getline(ss, s);
-        return Publish(s);
-    }
-
-
-
-    bool InitWithTimeout(const std::string& ip, int port, int seconds) {
-        if (nullptr != redisCon) {
-            return false;
-        }
-        struct timeval tv;
-        tv.tv_sec = seconds;
-        tv.tv_usec = 0;
-        redisCon = redisConnectWithTimeout(ip.c_str(), port, tv);
-        if (redisCon->err) {
-            std::cerr << "error code : " << redisCon->err << ". " << redisCon->errstr << std::endl;
-            return false;
-        }
-        return true;
-    }
-
-    ~RedisConnect() {
-        freeReply();
-        if (nullptr == redisCon) {
-            redisFree(redisCon);
-            redisCon = nullptr;
-        }
-    }
-private:
-    bool HashSetInner(std::stringstream& ss)
-    {
-        std::string data;
-        getline(ss, data);
-        //std::cout << __FUNCTION__ << " " << data << std::endl;
-        bool bret = false;
-        freeReply();
-        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
-
-        if (reply->type == REDIS_REPLY_ERROR ||
-            (reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") != 0))
-        {
-            if (reply->str != nullptr) {
-                std::cout << reply->str << std::endl;
-            }
-            std::cout << "Failed to execute " << __FUNCTION__ << std::endl << std::endl;
-            return bret;
-        }
-
-        bret = true;
-        return bret;
-    }
-
-    template<class T, class... Args>
-    bool HashSetInner(std::stringstream& ss, T head, Args... rest)
-    {
-        ss << head << " ";
-        return HashSetInner(ss, rest...);
-    }
-
-    bool Set(std::string data)
-    {
-        bool bret = false;
-        freeReply();
-        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
-
-        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
-        {
-            std::cout << reply->str << std::endl;
-            std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
-            return bret;
-        }
-        bret = true;
-        return bret;
-    }
-
-    bool Publish(std::string data)
-    {
-        bool bret = false;
-        freeReply();
-        reply = (redisReply*)::redisCommand(redisCon, data.c_str());
-
-/*        if (!(reply->type == REDIS_REPLY_STATUS && _stricmp(reply->str, "OK") == 0))
-        {
-            std::cout << reply->str << std::endl;
-            std::cout << "Failed to execute " << __FUNCTION__ << std::endl;
-            return bret;
-        }
-*/
-
-        bret = true;
-        return bret;
-    }
-
-
-
-    redisContext* redisCon;
-    redisReply* reply;
-};
-
-
 
 using json = nlohmann::json;
 
@@ -1113,38 +1152,31 @@ int main(int argc, char const* argv[])
     if (!b)
         return -1;
 
-    //r.Set("testtimes", 1);
-    //r.Set("float:pi", 3.14159265);
-    //r.Set("string", "test");
+    int frame_id = 10;
+
 
     
-    json json_msg{
-        { "name", "Judd Trump"},
-        { "credits", 1754500 },
-        { "ranking", 1}
-    };
-
-
-    //std::stringstream bone_names;
-    //std::stringstream bone_names;
-
-    //string pref = "";//# ""
     /*
-    bone_names << "[\'Pelvis\'," << "\'L_Hip\'," << "\'R_Hip\'," << "\'Spine1\'," << "\'L_Knee\'," << "\'R_Knee\', " << "\'Spine2\', " << "\'L_Ankle\', " << "\'R_Ankle\'," << "\'Spine3\',"
-               << "\'L_Foot\'," <<"\'R_Foot\', "<<"\'Neck\', " << "\'L_Collar\'," <<"\'R_Collar\'," <<"\'Head\'," <<"\'L_Shoulder\', " << "\'R_Shoulder\', "<<"\'L_Elbow\'," <<"\'R_Elbow\',"
-               <<"\'L_Wrist\', " << "\'R_Wrist\'," <<"\'L_Hand\', "<<"\'R_Hand\']";
-    */    
-    /*pref +  pref +
-        pref + pref + pref + pref + pref + ,
-        pref +  pref + pref + pref +  pref + 
-        pref +  pref + pref + pref +  pref + 
-        pref + pref +  pref + pref + ;*/
-    //std::cout << bone_names.str() << std::endl;
-
+    json ex3 = {
+    {"type", "setFrame"},
+    {"data", {"modelName",oss.str()},
+    {"boneNames",{"Pelvis","L_Hip","R_Hip","Spine1","L_Knee", "R_Knee", "Spine2", "L_Ankle","R_Ankle","Spine3", "L_Foot", "R_Foot", "Neck", "L_Collar", "R_Collar", "Head", "L_Shoulder", 
+    "R_Shoulder","L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist","L_Hand", "R_Hand"}},
+    {"scene","audiChinaHeadquater"},
+    {"frameData",{"poses",thetas},{"trans",{1,2,3}}},
+     {"frame_id",frame_id},
+     {"modelUrl", "/models/unionavatar/biden_smpl.glb"},
+     {"create",true},
+     {"clamp", true}
+    },
+    };*/
    
-
-    //ss << "{type:";
-    //std::cout << ss.str() << std::endl;
+    /*
+    json ex4 = {
+        {"type", "setFrame"} ,
+        {"boneNames", {"Pelvis","L_Hip","R_Hip","Spine1","L_Knee", "R_Knee", "Spine2", "L_Ankle","R_Ankle"}}};
+    */
+    
 
         //\"setFrame\"\n\"data\": {\"modelName\": f\"{" << "audiChinaHeadquater" << "}_{" << timestamp << "}_{" << obj_id << "},\n"
         //<< "\t \"boneNames\":" << bone_names.str() << "\n\t\"scene\": audiChinaHeadquater," << "\n \"frameData\": {\"poses\":";
@@ -1152,11 +1184,11 @@ int main(int argc, char const* argv[])
     //ss << ""{"type": "setFrame"" << ""data" : {"modelName": f"{self.scene_name}_{self.timestamp}_{obj_id}"" < <std::endl;
     //ss << "SET " << key << " " << value;
 
-    std::string s =  json_msg.dump(4);// .encode('utf-8');
-    //json_msg.toStyledString()
 
-    r.Publish("channel message", s);
 
+
+  
+    /*
     r.HashSet("hset", "myhash", "field1", 123.2342343);
     r.HashSet("hmset", "myhash", "field1", 1111, "field2", "f2");
     r.HashSet("hset", "myhash", "field1", 123.2342343);
@@ -1166,7 +1198,7 @@ int main(int argc, char const* argv[])
     r.HashSet("hset", "myhash", "field1", 1, 123.2342343);
     r.HashSet("hmset", "myhash", "field1", 1, 1111, "field2", "f2");
 
-
+    */
 
 
 
@@ -1271,7 +1303,7 @@ int main(int argc, char const* argv[])
     int frameId = 0;
     k4a_capture_t sensor_capture;
 
-    while(frameId < 100)
+    while(frameId < 1000000)
     {
         
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
@@ -1944,15 +1976,18 @@ int main(int argc, char const* argv[])
 
         ofstream myfile2(file);
         write_persons(g_persons, myfile2);
-        int msg_length = 1000;
-        char* msg = (char*)malloc(msg_length);
-        memset(msg, 0, msg_length);
+        
+
+        //RedisConnect r;
+        //redisReply* reply;
+
+
         auto timestamp = clk::now();
         const std::time_t t_c = std::chrono::system_clock::to_time_t(timestamp);
         int stamp = int(t_c);
         std::cout << "The system clock is currently at " << int(t_c);
 
-        //write_redis(g_persons, msg, stamp);
+        write_redis(g_persons,r, stamp, frameId);
         myfile2.close();
 
         //auto time_ = clk::now();
