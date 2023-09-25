@@ -2331,7 +2331,7 @@ namespace smpl
         quat = quat.reshape(72);
         quat.index({ Slice(0,3) }) = 0;// # 调整初始位置
         quat.index({ Slice(21,27) }) = 0;
-        quat.index({ Slice(69,72) }) = 0;
+        quat.index({ Slice(66,72) }) = 0;
 
         return quat; //先结束，umeyama去外面。
 

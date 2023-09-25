@@ -1303,8 +1303,32 @@ int main(int argc, char const* argv[])
         std::cerr << "Failed to open output file: " << output_filename << std::endl;
         return -1;
     }
-       
+    
 
+    smpl::SMPL* g_smpl = new smpl::SMPL;
+
+    torch::DeviceType device_type;
+
+    if (torch::cuda::is_available())
+    {
+        device_type = torch::kCPU;// CUDA;// torch::kCUDA;
+    }
+    else
+    {
+        device_type = torch::kCPU;
+    }
+    torch::Device device_cuda(device_type, 0);
+    device_cuda.set_index(0);
+
+    std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
+    //SINGLE_SMPL::get()->setDevice(device_cuda);
+    g_smpl->setDevice(device_cuda);
+
+    //SINGLE_SMPL::get()->setModelPath(modelPath);
+    g_smpl->setModelPath(modelPath);
+
+    //SINGLE_SMPL::get()->init();
+    g_smpl->init();
 
     int frameId = 0;
     k4a_capture_t sensor_capture;
@@ -1345,20 +1369,6 @@ int main(int argc, char const* argv[])
 
 
 
-        smpl::SMPL* g_smpl = new smpl::SMPL;
-
-        torch::DeviceType device_type;
-
-        if (torch::cuda::is_available())
-        {
-            device_type = torch::kCPU;// CUDA;// torch::kCUDA;
-        }
-        else
-        {
-            device_type = torch::kCPU;
-        }
-        torch::Device device_cuda(device_type, 0);
-        device_cuda.set_index(0);
 
 
         std::vector<SMPL::person*> g_persons;// (num_bodies);
@@ -1370,22 +1380,11 @@ int main(int argc, char const* argv[])
             // Successfully popped the body tracking result. Start your processing
             //检测人体数
             size_t num_bodies = k4abt_frame_get_num_bodies(body_frame); //取帧
-            if (num_bodies > 1)
-            {
-                int p = 2;
-            }
+            
             
             //依次计算每个人的smpl pose，global_trans 和global_trans, 保存到person中
             
-            std::string modelPath = "x64\\debug\\data\\basicModel_neutral_lbs_10_207_0_v1.0.0.npz";
-            //SINGLE_SMPL::get()->setDevice(device_cuda);
-            g_smpl->setDevice(device_cuda);
-
-            //SINGLE_SMPL::get()->setModelPath(modelPath);
-            g_smpl->setModelPath(modelPath);
-
-            //SINGLE_SMPL::get()->init();
-            g_smpl->init();
+            
 
 
             torch::Tensor vertices;
@@ -1803,6 +1802,7 @@ int main(int argc, char const* argv[])
 
                 
                 //////////////////////////////////////////////////////////////////////////
+                /*
                 string time = Time2Str();
                 outfile << time.c_str() << ",";
 
@@ -1936,7 +1936,7 @@ int main(int argc, char const* argv[])
                     << P_SHOULDER_RIGHT.position.v[1] << ", "
                     << P_SHOULDER_RIGHT.position.v[2] << ",";
 
-
+                    
                 // 左肘， 右肘角度
                 double left_elbow_angle = get_angle(P_WRIST_LEFT_2D.xy.x, P_WRIST_LEFT_2D.xy.y, P_ELBOW_LEFT_2D.xy.x, P_ELBOW_LEFT_2D.xy.y, P_SHOULDER_LEFT_2D.xy.x, P_SHOULDER_LEFT_2D.xy.y);
                 double right_elbow_angle = get_angle(P_WRIST_RIGHT_2D.xy.x, P_WRIST_RIGHT_2D.xy.y, P_ELBOW_RIGHT_2D.xy.x, P_ELBOW_RIGHT_2D.xy.y, P_SHOULDER_RIGHT_2D.xy.x, P_SHOULDER_RIGHT_2D.xy.y);
@@ -1954,7 +1954,7 @@ int main(int argc, char const* argv[])
 
                 outfile << left_elbow_angle << "," << right_elbow_angle << "," << left_knee_angle << "," << right_knee_angle << ","
                     << left_shoulder_angle << "," << right_shoulder_angle << endl;
-
+                    */
                 //按smpl 格式 保存關節點，並計算pose
                 auto duration_ume = std::chrono::duration_cast<ms>(clk::now() - begin_umeyama);
                 std::cout << "第" << frameId << "帧，共第" << i << "个人umeyama :话费 " << (double)duration_ume.count() << " ms" << std::endl;
@@ -2001,8 +2001,11 @@ int main(int argc, char const* argv[])
 
 
         frameId++;
+        
 
-    }   
+    }
+    delete g_smpl;
+    //delete p_smplcam;
     writer.release();
     return 0;
 }
