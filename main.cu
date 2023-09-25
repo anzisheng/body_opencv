@@ -429,24 +429,30 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
 
         ostringstream oss;
         oss << "audiChinaHeadquater_" << timestamp << "_" << p->m_id;
-        json ex3 = {
-        {"type",    "setFrame"},
-        {"data", {{"modelName",oss.str()},
-        {"boneNames",{"Pelvis","L_Hip","R_Hip","Spine1","L_Knee", "R_Knee", "Spine2", "L_Ankle","R_Ankle","Spine3", "L_Foot", "R_Foot", "Neck", "L_Collar", "R_Collar", "Head", "L_Shoulder",
-        "R_Shoulder","L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist","L_Hand", "R_Hand"}},
-        {"scene","audiChinaHeadquater"},
-        {"frameData",{"poses",thetas},{"trans",trans}},
-         {"frame_id",frame_id},
-         {"modelUrl", "/models/unionavatar/biden_smpl.glb"},
-         {"create",true},
-         {"clamp", true}
-        },
-        } };
+        nlohmann::json json_data;
+        json_data["type"] = "setFrame";
+        nlohmann::json data_all;
+        data_all["modelName"] = oss.str();
+        data_all["boneNames"] = { "Pelvis","L_Hip","R_Hip","Spine1","L_Knee", "R_Knee", "Spine2", "L_Ankle","R_Ankle","Spine3", "L_Foot", "R_Foot", "Neck", "L_Collar", "R_Collar", "Head", "L_Shoulder",
+        "R_Shoulder","L_Elbow", "R_Elbow", "L_Wrist", "R_Wrist","L_Hand", "R_Hand" };
+        data_all["scene"] = "audiChinaHeadquater";
+        nlohmann::json frameData;
+        frameData["poses"] = thetas;
+        frameData["trans"] = trans;
+        data_all["frameData"] = frameData;
+        data_all["frame_id"] = frame_id;
+        data_all["modelUrl"] = "/models/unionavatar/biden_smpl.glb";
+        data_all["create"] = true;
+        data_all["clamp"] = true;
 
-        std::string s1 = ex3.dump();// .encode('utf-8');
+        json_data["data"] = data_all;
 
+        std::string s2 = json_data.dump();// .encode('utf-8');
+        cout << json_data << endl;
         //r.Publish(" message", s);
-        r.Publish(" message", s1);
+        r.Publish(" message", s2);
+
+     
     }
    
 
@@ -1303,7 +1309,7 @@ int main(int argc, char const* argv[])
     int frameId = 0;
     k4a_capture_t sensor_capture;
 
-    while(frameId < 1000000)
+    while(true)
     {
         
         k4a_wait_result_t get_capture_result = k4a_device_get_capture(device, &sensor_capture, K4A_WAIT_INFINITE);
