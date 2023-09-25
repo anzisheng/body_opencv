@@ -411,24 +411,44 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
     for (std::vector<SMPL::person*>::iterator iter = persons.begin(); iter != persons.end(); iter++)
     {
         SMPL::person* p = *iter;
-        std::vector<float>  thetas(72);
-        float* ptr_Th = (float*)p->m_poses.data_ptr();
-        for (size_t i = 0; i < 72; i++)
+        
+        std::vector<double>  thetas(72);
+        float* ptr_Rh = (float*)p->m_Rh.data_ptr();
+
+        cout << "m_Rh " << p->m_Rh << endl;
+        cout << "m_poses " << p->m_poses<< endl;
+
+        double* ptr_poses = (double*)p->m_poses.data_ptr();
+        for (size_t i = 0; i < 3; i++)
         {
-            thetas[i] = (float)*((ptr_Th + i));
-            //myfile << (float)*((ptr_Th + i));
+            thetas[i] = (double)*((ptr_Rh + i));
+        }
+
+        for (size_t i = 3; i < 72; i++)
+        {
+            {
+                thetas[i] = (double)*((ptr_poses + i));
+            }
+            
         }
 
         std::vector<float>  trans(3);
-        ptr_Th = (float*)p->m_Th.data_ptr();
+        float* ptr_Th = (float*)p->m_Th.data_ptr();
         for (size_t i = 0; i < 3; i++)
         {
             trans[i] = (float)*((ptr_Th + i));
         }
+        /*
+        nlohmann::json clear_data;
+        //msg = {"type": "clear", "data": [self.scene_name]}
+        clear_data["type"] = "clear";
 
-
+        clear_data["data"] = { "audiChinaHeadquater" };
+        std::string s = clear_data.dump();
+        r.Publish(" message", s);
+        */
         ostringstream oss;
-        oss << "audiChinaHeadquater_" << timestamp << "_" << p->m_id;
+        oss << "audiChinaHeadquater_" << "_" << p->m_id;
         nlohmann::json json_data;
         json_data["type"] = "setFrame";
         nlohmann::json data_all;
@@ -441,7 +461,7 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         frameData["trans"] = trans;
         data_all["frameData"] = frameData;
         data_all["frame_id"] = frame_id;
-        data_all["modelUrl"] = "/models/unionavatar/biden_smpl.glb";
+        data_all["modelUrl"] = "/models/unionavatar/trump_T.glb";
         data_all["create"] = true;
         data_all["clamp"] = true;
 
@@ -452,11 +472,27 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         //r.Publish(" message", s);
         r.Publish(" message", s2);
 
-     
-    }
-   
+        nlohmann::json remove;
+        //msg = {"type": "removeModel", "data": {"name": f"{self.scene_name}_{self.timestamp}_{obj_id}",
+        //"scene": self.scene_name, "frame_id" : frame_id
+        remove["type"] = "removeModel";
 
+        nlohmann::json remove_data;
+        remove_data["name"] = oss.str();
+        remove_data["scene"] = "audiChinaHeadquater";
+        remove_data["frame_id"] = frame_id;
+        std::string s3 = remove_data.dump();
+        r.Publish(" message", s3);
+
+        nlohmann::json clear_data;
+        //msg = {"type": "clear", "data": [self.scene_name]}
+        clear_data["type"] = "clear";
+
+        clear_data["data"] = { "audiChinaHeadquater" };
+        std::string s = clear_data.dump();
+        r.Publish(" message", s);
  
+    }   
 }
 
 void write_persons(std::vector<SMPL::person*> persons, ofstream& file)
