@@ -2221,7 +2221,7 @@ namespace smpl
         }
         batch_size = pose_skeleton.size(0);
         torch::Device device = pose_skeleton.device();
-        std::cout << "begin ...................." << std::endl;
+        //std::cout << "begin ...................." << std::endl;
         auto begin0 = clk::now();
 		
         // 1. Add shape contribution
@@ -2293,7 +2293,7 @@ namespace smpl
         );
 
         /*
-                quat = output.rot_mats.reshape(-1, 4)
+        quat = output.rot_mats.reshape(-1, 4)
         aa = quaternion_to_angle_axis(quat)
         aa = aa.reshape(72)
         */
@@ -2330,6 +2330,8 @@ namespace smpl
         }
         quat = quat.reshape(72);
         quat.index({ Slice(0,3) }) = 0;// # 调整初始位置
+        quat.index({ Slice(9,12) }) = 0;// # 调整初始位置
+        //quat.index({ Slice(18,21) }) = 0;// # 调整初始位置
         quat.index({ Slice(21,27) }) = 0;
         quat.index({ Slice(66,72) }) = 0;
 

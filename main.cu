@@ -471,19 +471,18 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         cout << json_data << endl;
         //r.Publish(" message", s);
         r.Publish(" message", s2);
-
+        /*
         nlohmann::json remove;
         //msg = {"type": "removeModel", "data": {"name": f"{self.scene_name}_{self.timestamp}_{obj_id}",
         //"scene": self.scene_name, "frame_id" : frame_id
         remove["type"] = "removeModel";
-
         nlohmann::json remove_data;
         remove_data["name"] = oss.str();
         remove_data["scene"] = "audiChinaHeadquater";
         remove_data["frame_id"] = frame_id;
         std::string s3 = remove_data.dump();
         r.Publish(" message", s3);
-
+        */
         /*
         nlohmann::json clear_data;
         //msg = {"type": "clear", "data": [self.scene_name]}
@@ -1191,8 +1190,8 @@ int main(int argc, char const* argv[])
     RedisConnect r;
     redisReply* reply;
 
-    //bool b = r.InitWithTimeout("127.0.0.1", 6379, 1);//192.168.8.179
-    bool b = r.InitWithTimeout("192.168.8.179", 6379, 1);//
+    bool b = r.InitWithTimeout("127.0.0.1", 6379, 1);//192.168.8.179
+    //bool b = r.InitWithTimeout("192.168.8.179", 6379, 1);//
 
     if (!b)
         return -1;
