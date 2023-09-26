@@ -1101,7 +1101,7 @@ __global__ void addKernel()
 //#include <torch/extension.h>
 
 
-/*
+
 template <typename scalar_t>
 __global__ void trilinear_fw_kernel(
     const torch::PackedTensorAccessor<scalar_t, 3, torch::RestrictPtrTraits, size_t> feats,
@@ -1130,7 +1130,7 @@ __global__ void trilinear_fw_kernel(
             c * feats[n][6][f] +
             d * feats[n][7][f]);
 }
-*/
+
 
 template <typename scalar_t>
 torch::Tensor trilinear_fw_cu(
@@ -1146,13 +1146,13 @@ torch::Tensor trilinear_fw_cu(
     const dim3 threads(16, 16);
     const dim3 blocks((N + threads.x - 1) / threads.x, (F + threads.y - 1) / threads.y);
 
-    /*
+    
     trilinear_fw_kernel<scalar_t> <<<blocks, threads >>> (
         feats.packed_accessor<scalar_t, 3, torch::RestrictPtrTraits, size_t>(),
         points.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>(),
         feat_interp.packed_accessor<scalar_t, 2, torch::RestrictPtrTraits, size_t>()
         );
-        */
+        
     return feats;
 
 }
@@ -1259,7 +1259,7 @@ int main(int argc, char const* argv[])
     torch::Device device_global(device_type_global, 0);
     device_global.set_index(0);
 
-    /*
+    
     const int N = 65536;
     const int F = 256;
     torch::Tensor rand = torch::rand({ N, 8, F }).to(device_global);// .to(torch::CUDA);// , device = 'cuda')
@@ -1269,9 +1269,9 @@ int main(int argc, char const* argv[])
     torch::Tensor points = torch::rand({ N, 3 }).to(device_global);// , device = 'cuda') * 2 - 1
     //cout << points << endl << feats << endl;
     // anzs
-    //torch::Tensor feat_interp =  trilinear_interpolation_fw(feats, points);
-    //cout << feat_interp.sizes() << endl;
-    */
+    torch::Tensor feat_interp =  trilinear_interpolation_fw(feats, points);
+    cout << feat_interp.sizes() << endl;
+    
 	using ms = std::chrono::milliseconds;
 	using clk = std::chrono::system_clock;
 
