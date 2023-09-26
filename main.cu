@@ -461,7 +461,7 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         frameData["trans"] = trans;
         data_all["frameData"] = frameData;
         data_all["frame_id"] = frame_id;
-        data_all["modelUrl"] = "/models/unionavatar/trump_T.glb";
+        data_all["modelUrl"] = "/models/unionavatar/peiji_T_SMPL.glb";
         data_all["create"] = true;
         data_all["clamp"] = true;
 
@@ -484,6 +484,7 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         std::string s3 = remove_data.dump();
         r.Publish(" message", s3);
 
+        /*
         nlohmann::json clear_data;
         //msg = {"type": "clear", "data": [self.scene_name]}
         clear_data["type"] = "clear";
@@ -491,6 +492,7 @@ void write_redis(std::vector<SMPL::person*> persons, RedisConnect r, int timesta
         clear_data["data"] = { "audiChinaHeadquater" };
         std::string s = clear_data.dump();
         r.Publish(" message", s);
+        */
  
     }   
 }
@@ -1189,7 +1191,8 @@ int main(int argc, char const* argv[])
     RedisConnect r;
     redisReply* reply;
 
-    bool b = r.InitWithTimeout("127.0.0.1", 6379, 1);
+    //bool b = r.InitWithTimeout("127.0.0.1", 6379, 1);//192.168.8.179
+    bool b = r.InitWithTimeout("192.168.8.179", 6379, 1);//
 
     if (!b)
         return -1;
